@@ -816,6 +816,7 @@ static void MainScreen_Init(struct LScreen* s_) {
 	LButton_Init(&s->btnRegister, 100, 35, "Register", main_btnRegister);
 	LButton_Init(&s->btnOptions,  100, 35, "Options",  main_btnOptions);
 	LButton_Init(&s->btnUpdates,  -50, -50, "Updates",  main_btnUpdates);
+	LLabel_Init("https://discord.gg/gnRBEYEAJh");
 	
 	s->btnLogin.OnClick    = MainScreen_Login;
 	s->btnResume.OnClick   = MainScreen_Resume;
@@ -963,7 +964,7 @@ void MainScreen_SetActive(void) {
 	s->Free = MainScreen_Free;
 	s->Tick = MainScreen_Tick;\
 
-	s->title         = "ClassiCube";
+	s->title         = "NovaCraft";
 	s->onEnterWidget = (struct LWidget*)&s->btnLogin;
 	Launcher_SetScreen((struct LScreen*)s);
 }
@@ -1250,7 +1251,7 @@ static void ServersScreen_Init(struct LScreen* s_) {
 	s->widgets    = servers_widgets;
 	s->numWidgets = Array_Elems(servers_widgets);
 
-	LInput_Init( &s->iptSearch, 370, "Search servers..",               srv_iptSearch);
+	LInput_Init( &s->iptSearch, 370, "Search",               srv_iptSearch);
 	LInput_Init( &s->iptHash,   475, "classicube.net/server/play/...", srv_iptHash);
 
 	LButton_Init(&s->btnBack,    110, 30, "Back",    srv_btnBack);
