@@ -393,7 +393,7 @@ static struct ChatCommand HelpCommand = {
 	}
 };
 static void VersionCommand_Execute(const cc_string* args, int argsCount) {
-	Chat_AddRaw("ALPHA BUILD 0.0.3");
+	Chat_AddRaw("ALPHA BUILD 0.0.6");
 }
 
 
