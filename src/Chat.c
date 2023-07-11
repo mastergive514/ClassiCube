@@ -392,6 +392,49 @@ static struct ChatCommand HelpCommand = {
 		"&eDisplays the help for the given command.",
 	}
 };
+
+static void ReplaceallCommand_Execute(const cc_string* args, int argsCount) {
+    if (argsCount != 2) {
+        Chat_AddRaw("&cUsage: /replaceall [old] [new]"); return;
+    }
+    float old; float new;
+    Convert_ParseFloat(&args[0], &old); 
+    Convert_ParseFloat(&args[1], &new); 
+
+if(!Convert_ParseFloat(&args[0], &old) || !Convert_ParseFloat(&args[1], &new) ) {
+  Chat_AddRaw("&cMust be integers!");
+     return;
+    }
+
+
+for (int x = 0; x <= WorldLength; x++) {
+for (int y = 0; y <= World.Height; y++) {
+for (int z = 0; z <= World.Width; z++) {
+
+BlockID block = World_SafeGetBlock(x, y, z);
+if (block == old) {
+Game_ChangeBlock(x, y, z, new);
+
+}
+}
+}
+}
+
+
+
+
+
+}
+
+
+static struct ChatCommand ReplaceallCommand = {
+    "Replaceall", ReplaceallCommand_Execute,
+    0,
+    {
+        "&a/replaceall [old] [new]",
+        "&ereplaces [old] block to [new].",
+    }
+};
 static void VersionCommand_Execute(const cc_string* args, int argsCount) {
 	Chat_AddRaw("ALPHA BUILD 0.0.6");
 }
@@ -695,6 +738,7 @@ static void OnInit(void) {
 	Commands_Register(&CuboidCommand);
 	Commands_Register(&TeleportCommand);
 	Commands_Register(&ClearDeniedCommand);
+	Commands_Register(&ReplaceallCommand);
 
 #if defined CC_BUILD_MOBILE || defined CC_BUILD_WEB
 	/* Better to not log chat by default on mobile/web, */
