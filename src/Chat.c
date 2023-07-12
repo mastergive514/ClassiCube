@@ -407,7 +407,7 @@ if(!Convert_ParseFloat(&args[0], &old) || !Convert_ParseFloat(&args[1], &new) ) 
     }
 
 
-for (int x = 0; x <= WorldLength; x++) {
+for (int x = 0; x <= World.Length; x++) {
 for (int y = 0; y <= World.Height; y++) {
 for (int z = 0; z <= World.Width; z++) {
 
