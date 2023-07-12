@@ -816,7 +816,8 @@ static void MainScreen_Init(struct LScreen* s_) {
 	LButton_Init(&s->btnRegister, 100, 35, "Register", main_btnRegister);
 	LButton_Init(&s->btnOptions,  100, 35, "Options",  main_btnOptions);
 	LButton_Init(&s->btnUpdates,  -50, -50, "Updates",  main_btnUpdates);
-	LLabel_Init("https://discord.gg/gnRBEYEAJh");
+
+
 	
 	s->btnLogin.OnClick    = MainScreen_Login;
 	s->btnResume.OnClick   = MainScreen_Resume;
@@ -873,12 +874,12 @@ static void MainScreen_TickCheckUpdates(struct MainScreen* s) {
 		latest  = MainScreen_GetVersion(&CheckUpdateTask.latestRelease);
 		current = MainScreen_GetVersion(&currentStr);
 #ifdef CC_BUILD_FLATPAK
-		LLabel_SetConst(&s->lblUpdate, latest > current ? "&bALPHA BUILD" : "&bALPHA BUILD");
+		LLabel_SetConst(&s->lblUpdate, latest > current ? "&9BETA BUILD" : "&9BETA BUILD");
 #else
-		LLabel_SetConst(&s->lblUpdate, latest > current ? "&bALPHA BUILD" : "&bALPHA BUILD");
+		LLabel_SetConst(&s->lblUpdate, latest > current ? "&9BETA BUILD" : "&9BETA BUILD");
 #endif
 	} else {
-		LLabel_SetConst(&s->lblUpdate, "&cCheck failed");
+		LLabel_SetConst(&s->lblUpdate, "&9BETA BUILD");
 	}
 }
 
