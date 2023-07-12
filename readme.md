@@ -1,9 +1,8 @@
 NovaCraft is a custom Minecraft Classic and NovaCraft client written in C that works on Windows, macOS, Linux, Android, iOS, FreeBSD, NetBSD, OpenBSD, Solaris, Haiku, and in a web browser.<br> 
 <br>
-[Download Last Release]
+[Download Last Release](https://github.com/mastergive514/NovaCraft/releases/download/0.1fixed/NovaCraft.exe)
 <br>
 <br>
-(https://github.com/mastergive514/NovaCraft/releases/download/0.1fixed/NovaCraft.exe)
 **It is not affiliated with (or supported by) Mojang AB, Minecraft, or Microsoft in any way.**
 **Forked from Classicube**
 
