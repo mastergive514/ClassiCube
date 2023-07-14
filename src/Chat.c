@@ -442,7 +442,7 @@ static struct ChatCommand ReplaceallCommand = {
     }
 };
 static void VersionCommand_Execute(const cc_string* args, int argsCount) {
-	Chat_AddRaw("&aBETA BUILD 0.1");
+	Chat_AddRaw("&aBETA BUILD 0.2");
 }
 
 
