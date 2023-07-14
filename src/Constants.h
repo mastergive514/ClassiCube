@@ -2,22 +2,22 @@
 #define CC_CONSTANTS_H
 
 #define GAME_MAX_CMDARGS 5
-#define GAME_APP_VER "0.1b"
+#define GAME_APP_VER "0.2b"
 #define GAME_API_VER 1
 
 #if defined CC_BUILD_WEB
-#define GAME_APP_ALT   "NovaCraft 0.1b web mobile"
-#define GAME_APP_NAME  "NovaCraft 0.1b web"
+#define GAME_APP_ALT   "NovaCraft 0.2b web mobile"
+#define GAME_APP_NAME  "NovaCraft 0.2b web"
 #define GAME_APP_TITLE "NovaCraft"
 #elif defined CC_BUILD_ANDROID
-#define GAME_APP_NAME  "NovaCraft 0.1b android alpha"
-#define GAME_APP_TITLE "NovaCraft 0.1b android alpha"
+#define GAME_APP_NAME  "NovaCraft 0.2b android alpha"
+#define GAME_APP_TITLE "NovaCraft 0.2b android alpha"
 #elif defined CC_BUILD_IOS
-#define GAME_APP_NAME  "NovaCraft 0.1b iOS alpha"
-#define GAME_APP_TITLE "NovaCraft 0.1b iOS alpha"
+#define GAME_APP_NAME  "NovaCraft 0.2b iOS alpha"
+#define GAME_APP_TITLE "NovaCraft 0.2b iOS alpha"
 #else
 #define GAME_APP_NAME  "ClassiCube 1.3.5"
-#define GAME_APP_TITLE "NovaCraft 0.1b"
+#define GAME_APP_TITLE "NovaCraft 0.2b"
 #endif
 
 /* Max number of characters strings can have. */
