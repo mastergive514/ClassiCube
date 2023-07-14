@@ -406,6 +406,12 @@ if(!Convert_ParseFloat(&args[0], &old) || !Convert_ParseFloat(&args[1], &new) ) 
      return;
     }
 
+if (old < 1) {
+
+  Chat_AddRaw("&cInvalid old value");
+  return;
+}
+
 
 for (int x = 0; x <= World.Length; x++) {
 for (int y = 0; y <= World.Height; y++) {
@@ -438,6 +444,35 @@ static struct ChatCommand ReplaceallCommand = {
 static void VersionCommand_Execute(const cc_string* args, int argsCount) {
 	Chat_AddRaw("&aBETA BUILD 0.1");
 }
+
+
+
+
+static void CpeTestCommand_Execute(const cc_string* args, int argsCount) {
+    cc_string message = String_FromReadonly("Hello, World!");
+
+    Chat_AddOf(&message, MSG_TYPE_ANNOUNCEMENT);
+    Chat_AddOf(&message, MSG_TYPE_BIGANNOUNCEMENT);
+    Chat_AddOf(&message, MSG_TYPE_SMALLANNOUNCEMENT);
+    Chat_AddOf(&message, MSG_TYPE_STATUS_1);
+    Chat_AddOf(&message, MSG_TYPE_STATUS_2);
+    Chat_AddOf(&message, MSG_TYPE_STATUS_3);
+    Chat_AddOf(&message, MSG_TYPE_BOTTOMRIGHT_1);
+    Chat_AddOf(&message, MSG_TYPE_BOTTOMRIGHT_2);
+    Chat_AddOf(&message, MSG_TYPE_BOTTOMRIGHT_3);
+    Chat_AddRaw("Hello, World!");
+}
+
+static struct ChatCommand CpeTestCommand = {
+    "CpeTest", CpeTestCommand_Execute,
+    0,
+    {
+        "&a/CpeTest",
+        "&ePrints 'Hello, World!' with different message types",
+    }
+};
+
+
 
 
 static struct ChatCommand VersionCommand = {
@@ -739,6 +774,8 @@ static void OnInit(void) {
 	Commands_Register(&TeleportCommand);
 	Commands_Register(&ClearDeniedCommand);
 	Commands_Register(&ReplaceallCommand);
+	Commands_Register(&CpeTestCommand);
+
 
 #if defined CC_BUILD_MOBILE || defined CC_BUILD_WEB
 	/* Better to not log chat by default on mobile/web, */
