@@ -132,6 +132,7 @@ static void SPConnection_BeginConnect(void) {
 	Gen_Vanilla = true;
 	Gen_Seed    = Random_Next(&rnd, Int32_MaxValue);
 	GeneratingScreen_Show();
+        Chat_AddRaw("&aYou are use &fNovaCraft");
 }
 
 static char sp_lastCol;
@@ -229,6 +230,7 @@ static void MPConnection_FinishConnect(void) {
 	net_readCurrent = net_readBuffer;
 	net_lastPacket  = Game.Time;
 	Classic_SendLogin();
+        Chat_AddRaw("&aYou are use &fNovaCraft");
 }
 
 static void MPConnection_Fail(const cc_string* reason) {
