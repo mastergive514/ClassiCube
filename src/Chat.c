@@ -435,14 +435,14 @@ Game_ChangeBlock(x, y, z, new);
 
 static struct ChatCommand ReplaceallCommand = {
     "Replaceall", ReplaceallCommand_Execute,
-    0,
+    COMMAND_FLAG_SINGLEPLAYER_ONLY,
     {
         "&a/replaceall [old] [new]",
         "&ereplaces [old] block to [new].",
     }
 };
 static void VersionCommand_Execute(const cc_string* args, int argsCount) {
-	Chat_AddRaw("&aBETA BUILD 0.2");
+	Chat_AddRaw("&aBETA BUILD 0.3");
 }
 
 
@@ -475,6 +475,14 @@ static struct ChatCommand CpeTestCommand = {
 
 
 
+
+
+
+
+
+
+
+
 static struct ChatCommand VersionCommand = {
 	"Version", VersionCommand_Execute,
 	COMMAND_FLAG_UNSPLIT_ARGS,
@@ -483,6 +491,80 @@ static struct ChatCommand VersionCommand = {
 		"&eOutputs version of NovaCraft.",
 	}
 };
+
+static void KickCommand_Execute(const cc_string* args, int argsCount) {
+  cc_string reason = String_FromReadonly("&aThanks for playing come back soon!");
+  cc_string msg = String_FromReadonly("&cKicked by NovaCraft");
+  Game_Disconnect(&msg, &reason);
+
+}
+
+
+static struct ChatCommand KickCommand = {
+    "Kick", KickCommand_Execute,
+    0,
+    {
+        "&a/kick",
+        "&eKick You From the game!",
+    }
+};
+
+static void JumpCommand_Execute(const cc_string* args, int argsCount) {
+    struct Entity* e = &LocalPlayer_Instance.Base;
+    e->Velocity.Y = 0.42f;
+
+}
+
+static struct ChatCommand JumpCommand = {
+    "Jump", JumpCommand_Execute,
+    COMMAND_FLAG_SINGLEPLAYER_ONLY,
+    {
+        		"&a/client jump",
+		"&eJUMP!",
+                "&cNote: &eOnly in Singleplayer",
+    }
+};
+
+static void HacksCommand_Execute(const cc_string* args, int argsCount) {
+    struct LocalPlayer* p = &LocalPlayer_Instance;
+    // Check if the correct number of arguments is provided.
+    if (argsCount < 1) {
+        Chat_AddRaw("&e/Hacks: &cTrue or False!!");
+        return;
+    }
+
+    if (String_CaselessEqualsConst(&args[0], "True")) {
+	p->Hacks.CanFly            = true;
+	p->Hacks.CanNoclip         = true;
+	p->Hacks.CanSpeed          = true;
+	p->Hacks.CanRespawn        = true;
+	p->Hacks.CanUseThirdPerson = true;
+        Chat_AddRaw("&eHacks Enabled!"); 
+  }
+   else if (String_CaselessEqualsConst(&args[0], "False")) {
+       
+	p->Hacks.CanFly            = false;
+	p->Hacks.CanNoclip         = false;
+	p->Hacks.CanSpeed          = false;
+	p->Hacks.CanRespawn        = false;
+	p->Hacks.CanUseThirdPerson = false;
+        Chat_AddRaw("&eHacks Disabled!");
+
+}
+  else {
+        Chat_AddRaw("&e/Hacks: &cInvalid argument. Use True or False.");
+    }
+}
+
+static struct ChatCommand HacksCommand = {
+    "Hacks", HacksCommand_Execute,
+    COMMAND_FLAG_SINGLEPLAYER_ONLY,
+    {
+        "/hacks (True/False)",
+        "&cNote: &eOnly in Singleplayer",
+    }
+};
+
 
 static void GpuInfoCommand_Execute(const cc_string* args, int argsCount) {
 	char buffer[7 * STRING_SIZE];
@@ -775,6 +857,9 @@ static void OnInit(void) {
 	Commands_Register(&ClearDeniedCommand);
 	Commands_Register(&ReplaceallCommand);
 	Commands_Register(&CpeTestCommand);
+	Commands_Register(&KickCommand);
+        Commands_Register(&JumpCommand);
+        Commands_Register(&HacksCommand);
 
 
 #if defined CC_BUILD_MOBILE || defined CC_BUILD_WEB
