@@ -812,8 +812,8 @@ static void MainScreen_Init(struct LScreen* s_) {
 	LButton_Init(&s->btnDirect,  200, 35, "Direct connect", main_btnDirect);
 	LButton_Init(&s->btnSPlayer, 200, 35, "Singleplayer",   main_btnSPlayer);
 
-	LLabel_Init( &s->lblUpdate,   "&eChecking..",      main_lblUpdate);
-	LButton_Init(&s->btnRegister, 100, 35, "Register", main_btnRegister);
+	LLabel_Init( &s->lblUpdate,   "Loading Version...",      main_lblUpdate);
+	LButton_Init(&s->btnRegister, 0, 0, "", main_btnRegister);
 	LButton_Init(&s->btnOptions,  100, 35, "Options",  main_btnOptions);
 	LButton_Init(&s->btnUpdates,  -50, -50, "Updates",  main_btnUpdates);
 
