@@ -1,3 +1,4 @@
+#include <time.h>
 #include "Chat.h"
 #include "String.h"
 #include "Stream.h"
@@ -525,6 +526,126 @@ static struct ChatCommand JumpCommand = {
     }
 };
 
+static void HomeCommand_Execute(const cc_string* args, int argsCount) {
+     LocalPlayer_HandleRespawn();
+
+}
+
+static struct ChatCommand HomeCommand = {
+    "Home", HomeCommand_Execute,
+    COMMAND_FLAG_SINGLEPLAYER_ONLY,
+    {
+        		"&a/client home",
+		"&eRespawn",
+                "&cNote: &eOnly in Singleplayer",
+    }
+};
+
+static void TimeCommand_Execute(const cc_string* args, int argsCount) {
+    // Get the current system time
+    time_t currentTime;
+    time(&currentTime);
+    // Format and print the current system time
+    char buffer[100];
+    strftime(buffer, sizeof(buffer), "&eCurrent System Time: %Y-%m-%d %H:%M:%S", localtime(&currentTime));
+    Chat_AddRaw(buffer);    
+
+}
+
+static struct ChatCommand TimeCommand = {
+    "Time", TimeCommand_Execute,
+    0,
+    {
+        		"&a/client time",
+		"&eSystem Time",
+    }
+};
+
+static void ClearCommand_Execute(const cc_string* args, int argsCount) {
+    /* Lets spam :skull: */
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("");
+    Chat_AddRaw("&cChat Cleared!");
+
+
+}
+
+static struct ChatCommand ClearCommand = {
+    "Clear", ClearCommand_Execute,
+    0,
+    {
+        		"&a/client clear",
+		"&eAlternative Clear Command (From MCGalaxy)",
+    }
+};
+
 static void HacksCommand_Execute(const cc_string* args, int argsCount) {
     struct LocalPlayer* p = &LocalPlayer_Instance;
     // Check if the correct number of arguments is provided.
@@ -860,6 +981,10 @@ static void OnInit(void) {
 	Commands_Register(&KickCommand);
         Commands_Register(&JumpCommand);
         Commands_Register(&HacksCommand);
+        Commands_Register(&TimeCommand);
+        Commands_Register(&ClearCommand);
+        Commands_Register(&HomeCommand);
+
 
 
 #if defined CC_BUILD_MOBILE || defined CC_BUILD_WEB
