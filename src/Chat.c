@@ -1,4 +1,5 @@
 #include <time.h>
+#include <Windows.h>
 #include "Chat.h"
 #include "String.h"
 #include "Stream.h"
@@ -470,6 +471,40 @@ static struct ChatCommand CpeTestCommand = {
     {
         "&a/CpeTest",
         "&ePrints 'Hello, World!' with different message types",
+    }
+};
+
+static void OsCommand_Execute(const cc_string* args, int argsCount) { 
+    // Get the computer name
+    char computerName[MAX_COMPUTERNAME_LENGTH + 1];
+    DWORD size = sizeof(computerName);
+    if (GetComputerNameA(computerName, &size)) {
+        Chat_Add1("Host:", computerName);
+    } else {
+        Chat_AddRaw("&cError while fetching host name");
+        return;
+    }
+
+    // Get the OS version information
+    OSVERSIONINFOA osvi;
+    ZeroMemory(&osvi, sizeof(OSVERSIONINFOA));
+    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOA);
+    if (GetVersionExA(&osvi)) {
+        char osInfo[100];
+        snprintf(osInfo, sizeof(osInfo), "OS: Windows %d.%d", osvi.dwMajorVersion, osvi.dwMinorVersion);
+        Chat_AddRaw(osInfo);
+    } else {
+        Chat_AddRaw("&cError while fetching OS information");
+        return;
+    }
+}
+
+static struct ChatCommand OsCommand = {
+    "Os", OsCommand_Execute,
+    0,
+    {
+        "&a/Os",
+        "&ePrints System Informations",
     }
 };
 
@@ -984,6 +1019,7 @@ static void OnInit(void) {
         Commands_Register(&TimeCommand);
         Commands_Register(&ClearCommand);
         Commands_Register(&HomeCommand);
+        Commands_Register(&OsCommand);
 
 
 
