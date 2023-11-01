@@ -20,6 +20,7 @@
 #include "TexturePack.h"
 #include "Options.h"
 #include "Drawer2D.h"
+#include "NOVACRAFT.h"
  
 static char status[5][STRING_SIZE];
 static char bottom[3][STRING_SIZE];
@@ -444,7 +445,7 @@ static struct ChatCommand ReplaceallCommand = {
     }
 };
 static void VersionCommand_Execute(const cc_string* args, int argsCount) {
-	Chat_AddRaw("&aBETA BUILD 0.3");
+	Chat_AddRaw(novacraftrelease);
 }
 
 
@@ -474,39 +475,6 @@ static struct ChatCommand CpeTestCommand = {
     }
 };
 
-static void OsCommand_Execute(const cc_string* args, int argsCount) { 
-    // Get the computer name
-    char computerName[MAX_COMPUTERNAME_LENGTH + 1];
-    DWORD size = sizeof(computerName);
-    if (GetComputerNameA(computerName, &size)) {
-        Chat_Add1("Host:", computerName);
-    } else {
-        Chat_AddRaw("&cError while fetching host name");
-        return;
-    }
-
-    // Get the OS version information
-    OSVERSIONINFOA osvi;
-    ZeroMemory(&osvi, sizeof(OSVERSIONINFOA));
-    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOA);
-    if (GetVersionExA(&osvi)) {
-        char osInfo[100];
-        snprintf(osInfo, sizeof(osInfo), "OS: Windows %d.%d", osvi.dwMajorVersion, osvi.dwMinorVersion);
-        Chat_AddRaw(osInfo);
-    } else {
-        Chat_AddRaw("&cError while fetching OS information");
-        return;
-    }
-}
-
-static struct ChatCommand OsCommand = {
-    "Os", OsCommand_Execute,
-    0,
-    {
-        "&a/Os",
-        "&ePrints System Informations",
-    }
-};
 
 
 
