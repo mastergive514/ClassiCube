@@ -1,1 +1,1 @@
-char NOVACRAFT_VERSION[] = "0.2"
+char novacraftrelease[] = "1.1"
