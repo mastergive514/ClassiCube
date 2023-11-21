@@ -1097,7 +1097,6 @@ static void OnInit(void) {
         Commands_Register(&TimeCommand);
         Commands_Register(&ClearCommand);
         Commands_Register(&HomeCommand);
-        Commands_Register(&OsCommand);
 
 
 
