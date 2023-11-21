@@ -1,5 +1,4 @@
 #include <time.h>
-#include <Windows.h>
 #include "Chat.h"
 #include "String.h"
 #include "Stream.h"
