@@ -41,6 +41,7 @@ double Chat_AnnouncementReceived;
 double Chat_BigAnnouncementReceived;
 double Chat_SmallAnnouncementReceived;
 
+
 struct StringsBuffer Chat_Log, Chat_InputLog;
 cc_bool Chat_Logging;
 
