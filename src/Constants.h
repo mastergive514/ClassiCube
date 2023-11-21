@@ -1,6 +1,11 @@
 #ifndef CC_CONSTANTS_H
 #define CC_CONSTANTS_H
 
+
+// If STRING_SIZE is defined elsewhere, comment this line out
+#define STRING_SIZE 256 // Define STRING_SIZE
+
+
 #define GAME_MAX_CMDARGS 5
 #define GAME_APP_VER "0.2b"
 #define GAME_API_VER 1
