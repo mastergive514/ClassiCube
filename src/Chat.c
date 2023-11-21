@@ -20,7 +20,9 @@
 #include "Options.h"
 #include "Drawer2D.h"
 #include "NOVACRAFT.h"
- 
+
+#define STRING_SIZE 256 // Define STRING_SIZE
+
 static char status[5][STRING_SIZE];
 static char bottom[3][STRING_SIZE];
 static char client[2][STRING_SIZE];
@@ -28,10 +30,10 @@ static char announcement[STRING_SIZE];
 static char bigAnnouncement[STRING_SIZE];
 static char smallAnnouncement[STRING_SIZE];
 
-cc_string Chat_Status[5]       = { String_FromArray(status[0]), String_FromArray(status[1]), String_FromArray(status[2]),
-                                                                String_FromArray(status[3]), String_FromArray(status[4]) };
-cc_string Chat_BottomRight[3]  = { String_FromArray(bottom[0]), String_FromArray(bottom[1]), String_FromArray(bottom[2]) };
-cc_string Chat_ClientStatus[2] = { String_FromArray(client[0]), String_FromArray(client[8]) };
+cc_string Chat_Status[5] = {String_FromArray(status[0]), String_FromArray(status[1]), String_FromArray(status[2]),
+                            String_FromArray(status[3]), String_FromArray(status[4])};
+cc_string Chat_BottomRight[3] = {String_FromArray(bottom[0]), String_FromArray(bottom[1]), String_FromArray(bottom[2])};
+cc_string Chat_ClientStatus[2] = {String_FromArray(client[0]), String_FromArray(client[1])};
 
 cc_string Chat_Announcement = String_FromArray(announcement);
 cc_string Chat_BigAnnouncement = String_FromArray(bigAnnouncement);
@@ -40,7 +42,6 @@ cc_string Chat_SmallAnnouncement = String_FromArray(smallAnnouncement);
 double Chat_AnnouncementReceived;
 double Chat_BigAnnouncementReceived;
 double Chat_SmallAnnouncementReceived;
-
 
 struct StringsBuffer Chat_Log, Chat_InputLog;
 cc_bool Chat_Logging;
