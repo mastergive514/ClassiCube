@@ -2,8 +2,7 @@
 #define CC_CONSTANTS_H
 
 
-// If STRING_SIZE is defined elsewhere, comment this line out
-#define STRING_SIZE 256 // Define STRING_SIZE
+
 
 
 #define GAME_MAX_CMDARGS 5
