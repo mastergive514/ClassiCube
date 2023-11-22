@@ -1,1 +1,1 @@
-char novacraftrelease[] = "1.1"
+char novacraftrelease[] = "1.1";
