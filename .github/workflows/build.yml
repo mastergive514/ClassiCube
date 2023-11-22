@@ -73,9 +73,7 @@ jobs:
         run: |
           cd src
           make mingw CC="i686-w64-mingw32-gcc"
-      - name: Make new folder for artifacts Linux
-        run: |
-          mkdir downloads-linux
+      
       # Upload Artifacts for Ubuntu/Linux
       - name: Upload Artifacts for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
         if: matrix.config.plat == 'Linux' || (matrix.config.plat == 'Windows' && matrix.config.bits == 64)
@@ -115,9 +113,7 @@ jobs:
           msbuild src\ClassiCube.vcxproj `
             -property:Configuration=Debug -property:Platform=Win32 `
             -property:WindowsTargetPlatformVersion=10 -property:PlatformToolset=v142
-      - name: Make new folder for artifacts Windows
-        run: |
-          mkdir downloads-win
+     
       # Upload Artifacts for Windows
       - name: Upload Artifacts for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
         if: matrix.config.plat == 'Windows'
@@ -155,11 +151,7 @@ jobs:
         run: |
           cd src
           make mac_x32
-      - name: Make new folder for artifacts Mac
-        run: |
-          mkdir downloads-mac
-          dir
-          ls
+      
 
       # Upload Artifacts for Mac
       - name: Upload Artifacts for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
