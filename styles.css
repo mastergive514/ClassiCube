@@ -1,0 +1,146 @@
+/* Add these animations */
+@keyframes animateLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+
+/* Resetting default margin and padding */
+body, h1, h2, p {
+  margin: 0;
+  padding: 0;
+}
+
+/* Basic styles */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f3f3f3;
+}
+
+.navbar {
+  background-color: #333;
+  color: white;
+  text-align: center;
+}
+
+.navbar ul {
+  padding: 0;
+  list-style-type: none;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar ul li {
+  display: inline-block;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+}
+
+.logo-text {
+  font-size: 24px;
+  color: white;
+  text-decoration: none;
+}
+
+.section {
+  text-align: center;
+  padding: 50px 0;
+}
+
+h1 {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+h2 {
+  font-size: 36px;
+  margin-bottom: 15px;
+}
+
+p {
+  font-size: 18px;
+  color: #555;
+  line-height: 1.6;
+}
+
+.download-btn {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.download-btn:hover {
+  background-color: #0056b3;
+}
+
+.github-link {
+  display: inline-block;
+  padding: 10px 20px;
+  border: 1px solid #007bff;
+  border-radius: 5px;
+  color: #007bff;
+  text-decoration: none;
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.github-link:hover {
+  color: #0056b3;
+  border-color: #0056b3;
+}
+
+/* Apply animations to elements */
+.animate-left {
+  animation: animateLeft 0.8s ease-out forwards;
+}
+
+/* Adjustments for the sections */
+.home-section {
+  background-color: #f0f0f0;
+  text-align: center;
+  padding: 100px 0;
+}
+
+.download-section {
+  background-color: #e8e8e8;
+  text-align: center;
+  padding: 80px 0;
+  color: #333;
+}
+
+/* Fine-tuning the font sizes and line heights */
+h1 {
+  font-size: 56px;
+  margin-bottom: 20px;
+}
+
+h2 {
+  font-size: 42px;
+  margin-bottom: 15px;
+}
+
+p {
+  font-size: 20px;
+  line-height: 1.6;
+}
