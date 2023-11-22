@@ -874,12 +874,12 @@ static void MainScreen_TickCheckUpdates(struct MainScreen* s) {
 		latest  = MainScreen_GetVersion(&CheckUpdateTask.latestRelease);
 		current = MainScreen_GetVersion(&currentStr);
 #ifdef CC_BUILD_FLATPAK
-		LLabel_SetConst(&s->lblUpdate, latest > current ? "&9BETA BUILD" : "&9BETA BUILD");
+		LLabel_SetConst(&s->lblUpdate, latest > current ? "1.1" : "1.1");
 #else
-		LLabel_SetConst(&s->lblUpdate, latest > current ? "&9BETA BUILD" : "&9BETA BUILD");
+		LLabel_SetConst(&s->lblUpdate, latest > current ? "1.1" : "1.1");
 #endif
 	} else {
-		LLabel_SetConst(&s->lblUpdate, "&9BETA BUILD");
+		LLabel_SetConst(&s->lblUpdate, "1.1");
 	}
 }
 
