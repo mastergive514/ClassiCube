@@ -158,6 +158,8 @@ jobs:
       - name: Make new folder for artifacts Mac
         run: |
           mkdir downloads-mac
+          dir
+          ls
 
       # Upload Artifacts for Mac
       - name: Upload Artifacts for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
