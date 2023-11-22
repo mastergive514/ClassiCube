@@ -120,7 +120,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: my_artifact_name_${{ matrix.config.plat }}_${{ matrix.config.bits }}bit
-          path: src\x64\Debug\ # Update this path to your Windows artifact location
+          path: src # Update this path to your Windows artifact location
 
   build_on_mac:
     name: Build ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit) on Mac
