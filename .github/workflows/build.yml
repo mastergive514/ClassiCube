@@ -97,6 +97,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.1
 
       # Build
       - name: Build for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
