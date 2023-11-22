@@ -1,4 +1,4 @@
-name: Build
+name: Build and Upload Artifacts
 
 on: [push, pull_request]
 
@@ -15,10 +15,12 @@ jobs:
           - { plat: "Linux", bits: 32 }
           - { plat: "Windows", bits: 64 }
           - { plat: "Windows", bits: 32 }
+          - { plat: "Mac", bits: 64 }
+          # For Mac 32-bit configurations, uncomment the line below
+          # - { plat: "Mac", bits: 32 }
 
     steps:
       - uses: actions/checkout@v2
-
       - name: Install Shared Dependencies
         run: |
           sudo apt-get -y update &&
@@ -46,7 +48,6 @@ jobs:
         if: matrix.config.plat == 'Windows' && matrix.config.bits == 32
         run: |
           sudo apt-get -y install gcc-mingw-w64-i686
-
       # Build
       - name: Build for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
         if: matrix.config.plat == 'Linux' && matrix.config.bits == 64
@@ -72,6 +73,16 @@ jobs:
         run: |
           cd src
           make mingw CC="i686-w64-mingw32-gcc"
+      - name: Make new folder for artifacts Linux
+        run: |
+          mkdir downloads-linux
+      # Upload Artifacts for Ubuntu/Linux
+      - name: Upload Artifacts for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
+        if: matrix.config.plat == 'Linux' || (matrix.config.plat == 'Windows' && matrix.config.bits == 64)
+        uses: actions/upload-artifact@v2
+        with:
+          name: my_artifact_name_${{ matrix.config.plat }}_${{ matrix.config.bits }}bit
+          path: downloads-linux
 
   build_on_windows:
     name: Build ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit) on Windows
@@ -87,9 +98,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1.1
-
       # Build
       - name: Build for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
         if: matrix.config.plat == 'Windows' && matrix.config.bits == 64
@@ -104,6 +112,16 @@ jobs:
           msbuild src\ClassiCube.vcxproj `
             -property:Configuration=Debug -property:Platform=Win32 `
             -property:WindowsTargetPlatformVersion=10 -property:PlatformToolset=v142
+      - name: Make new folder for artifacts Windows
+        run: |
+          mkdir downloads-win
+      # Upload Artifacts for Windows
+      - name: Upload Artifacts for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
+        if: matrix.config.plat == 'Windows'
+        uses: actions/upload-artifact@v2
+        with:
+          name: my_artifact_name_${{ matrix.config.plat }}_${{ matrix.config.bits }}bit
+          path: downloads-win # Update this path to your Windows artifact location
 
   build_on_mac:
     name: Build ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit) on Mac
@@ -114,8 +132,7 @@ jobs:
       matrix:
         config:
           - { plat: "Mac", bits: 64 }
-          # "ld: warning: ignoring file ..., missing required architecture i386 in file ..."
-          # "Undefined symbols for architecture i386"
+          # Uncomment the line below for Mac 32-bit configurations
           # - { plat: "Mac", bits: 32 }
 
     steps:
@@ -135,3 +152,14 @@ jobs:
         run: |
           cd src
           make mac_x32
+      - name: Make new folder for artifacts Mac
+        run: |
+          mkdir downloads-mac
+
+      # Upload Artifacts for Mac
+      - name: Upload Artifacts for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
+        if: matrix.config.plat == 'Mac'
+        uses: actions/upload-artifact@v2
+        with:
+          name: my_artifact_name_${{ matrix.config.plat }}_${{ matrix.config.bits }}bit
+          path: downloads-mac # Update this path to your Mac artifact location
