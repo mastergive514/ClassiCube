@@ -573,8 +573,7 @@ void WeatherCommand_Execute(const cc_string* args, int argsCount) {
         Chat_AddRaw("Usage: /weather [Sunny/Rainy/Snowy]\n");
         return;
     }
-
-    int CustomStrICmp(const char* str1, const char* str2) {
+    void CustomStrICmp(const char* str1, const char* str2) {
     while (*str1 && *str2) {
         int cmp = toupper((unsigned char)*str1) - toupper((unsigned char)*str2);
         if (cmp != 0) return cmp;
@@ -595,9 +594,9 @@ void WeatherCommand_Execute(const cc_string* args, int argsCount) {
 
     if (raw != -1) {
         Env_SetWeather(raw);
-        Chat_AddRaw("Weather changed to %s\n", userInput);
+        Chat_Add1("Weather changed to %s\n", userInput);
     } else {
-        Chat_AddRaw("Invalid weather type. Please use Sunny, Rainy, or Snowy.\n");
+        Chat_AddRaw("Invalid weather type. Please use Sunny, Rainy, or Snowy.");
     }
 }
 
