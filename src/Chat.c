@@ -565,18 +565,17 @@ static struct ChatCommand TimeCommand = {
 };
 
 static void WeatherCommand_Execute(const cc_string* args, int argsCount) {
-       
-        Env_SetWeather(1);     
-
-
+  int weather = 0;
+  Convert_ParseFloat(&args[0], &weather)
+  Env_SetWeather(weather);
 }
 
 static struct ChatCommand WeatherCommand = {
     "Weather", WeatherCommand_Execute,
     0,
     {
-        		"&a/client weather [Normal/Rain/Snow]",
-		"&eChange The Weather :D",
+                "&a/client weather [Normal/Rain/Snow]",
+        "&eChange The Weather :D",
     }
 };
 
@@ -1115,6 +1114,7 @@ static void OnInit(void) {
         Commands_Register(&TimeCommand);
         Commands_Register(&ClearCommand);
         Commands_Register(&HomeCommand);
+	Commands_Register(&WeatherCommand);
 
 
 
