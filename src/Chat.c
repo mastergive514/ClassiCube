@@ -575,13 +575,13 @@ void WeatherCommand_Execute(const cc_string* args, int argsCount) {
     }
 
     if (String_CaselessEqualsConst(&args[0], "Sunny")) {
-        Env_SetWeather(Sunny);
+        Env_SetWeather(1);
         Chat_AddRaw("Weather changed to Sunny");
     } else if (String_CaselessEqualsConst(&args[0], "Rainy")) {
-        Env_SetWeather(Rainy);
+        Env_SetWeather(2);
 	Chat_AddRaw("Weather changed to Rainy");   
 		} else if (String_CaselessEqualsConst(&args[0], "Snowy")) {
-        Env_SetWeather(Snowy);
+        Env_SetWeather(3);
         Chat_AddRaw("Weather changed to Snowy");
 	   
 		}
