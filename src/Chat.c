@@ -544,27 +544,7 @@ static struct ChatCommand HomeCommand = {
     }
 };
 
-static void TimeCommand_Execute(const cc_string* args, int argsCount) {
 
-    
-    // Get the current system time
-    time_t currentTime;
-    time(&currentTime);
-    // Format and print the current system time
-    char buffer[100];
-    strftime(buffer, sizeof(buffer), "&eCurrent System Time: %Y-%m-%d %H:%M:%S", localtime(&currentTime));
-    Chat_AddRaw(buffer);    
-
-}
-
-static struct ChatCommand TimeCommand = {
-    "Time", TimeCommand_Execute,
-    0,
-    {
-        		"&a/client time",
-		"&eSystem Time",
-    }
-};
 
 
 
@@ -575,14 +555,14 @@ void WeatherCommand_Execute(const cc_string* args, int argsCount) {
     }
 
     if (String_CaselessEqualsConst(&args[0], "Sunny")) {
-        Env_SetWeather(1);
-        Chat_AddRaw("Weather changed to Sunny");
+        Env_SetWeather(0);
+        Chat_AddRaw("&eWeather changed to &aSunny");
     } else if (String_CaselessEqualsConst(&args[0], "Rainy")) {
-        Env_SetWeather(2);
-	Chat_AddRaw("Weather changed to Rainy");   
+        Env_SetWeather(1);
+	Chat_AddRaw("&eWeather changed to a&Rainy");   
 		} else if (String_CaselessEqualsConst(&args[0], "Snowy")) {
-        Env_SetWeather(3);
-        Chat_AddRaw("Weather changed to Snowy");
+        Env_SetWeather(2);
+        Chat_AddRaw("&eWeather changed to &aSnowy");
 	   
 		}
     else {
@@ -1132,7 +1112,6 @@ static void OnInit(void) {
 	Commands_Register(&KickCommand);
         Commands_Register(&JumpCommand);
         Commands_Register(&HacksCommand);
-        Commands_Register(&TimeCommand);
         Commands_Register(&ClearCommand);
         Commands_Register(&HomeCommand);
 	Commands_Register(&WeatherCommand);
