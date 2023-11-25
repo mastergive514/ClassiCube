@@ -573,6 +573,7 @@ void WeatherCommand_Execute(const cc_string* args, int argsCount) {
         Chat_AddRaw("Usage: /weather [Sunny/Rainy/Snowy]\n");
         return;
     }
+    void CustomStrICmp(const char* str1, const char* str2);
     void CustomStrICmp(const char* str1, const char* str2) {
     while (*str1 && *str2) {
         int cmp = toupper((unsigned char)*str1) - toupper((unsigned char)*str2);
