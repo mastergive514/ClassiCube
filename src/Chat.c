@@ -569,34 +569,23 @@ static struct ChatCommand TimeCommand = {
 
 
 void WeatherCommand_Execute(const cc_string* args, int argsCount) {
-    if (argsCount < 2) {
+    if (argsCount < 1) {
         Chat_AddRaw("Usage: /weather [Sunny/Rainy/Snowy]\n");
         return;
     }
-    void CustomStrICmp(const char* str1, const char* str2);
-    void CustomStrICmp(const char* str1, const char* str2) {
-    while (*str1 && *str2) {
-        int cmp = toupper((unsigned char)*str1) - toupper((unsigned char)*str2);
-        if (cmp != 0) return cmp;
-        str1++;
-        str2++;
-    }
-    return toupper((unsigned char)*str1) - toupper((unsigned char)*str2);
-}
 
-    const char* userInput = args[1].buffer;
-    int raw = -1;
-    for (int i = 0; i < sizeof(Weather_Names) / sizeof(Weather_Names[0]); i++) {
-    if (CustomStrICmp(userInput, Weather_Names[i]) == 0) {
-        raw = i;
-        break;
-    }
-}
-
-    if (raw != -1) {
-        Env_SetWeather(raw);
-        Chat_Add1("Weather changed to %s\n", userInput);
-    } else {
+    if (String_CaselessEqualsConst(&args[0], "Sunny") {
+        Env_SetWeather(Sunny);
+        Chat_AddRaw("Weather changed to Sunny");
+    } else if (String_CaselessEqualsConst(&args[0], "Rainy") {
+        Env_SetWeather(Rainy)
+	Chat_AddRaw("Weather changed to Rainy");   
+		} else if (String_CaselessEqualsConst(&args[0], "Snowy") {
+        Env_SetWeather(Snowy)
+        Chat_AddRaw("Weather changed to Snowy");
+	   
+		}
+    else {
         Chat_AddRaw("Invalid weather type. Please use Sunny, Rainy, or Snowy.");
     }
 }
