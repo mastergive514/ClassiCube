@@ -564,20 +564,40 @@ static struct ChatCommand TimeCommand = {
     }
 };
 
-static void WeatherCommand_Execute(const cc_string* args, int argsCount) {
-  int weather = 0;
-  Convert_ParseFloat(&args[0], &weather);
-  Env_SetWeather(weather);
+
+
+void WeatherCommand_Execute(const cc_string* args, int argsCount) {
+    if (argsCount < 2) {
+        Chat_AddRaw("Usage: /weather [Sunny/Rainy/Snowy]\n");
+        return;
+    }
+
+    const char* userInput = args[1].buffer;
+    int raw = -1;
+    for (int i = 0; i < sizeof(Weather_Names) / sizeof(Weather_Names[0]); i++) {
+        if (strcasecmp(userInput, Weather_Names[i]) == 0) {
+            raw = i;
+            break;
+        }
+    }
+
+    if (raw != -1) {
+        Env_SetWeather(raw);
+        Chat_AddRaw("Weather changed to %s\n", userInput);
+    } else {
+        Chat_AddRaw("Invalid weather type. Please use Sunny, Rainy, or Snowy.\n");
+    }
 }
 
 static struct ChatCommand WeatherCommand = {
     "Weather", WeatherCommand_Execute,
     0,
     {
-                "&a/client weather [Normal/Rain/Snow]",
+        "&a/client weather [Sunny/Rainy/Snowy]",
         "&eChange The Weather :D",
     }
 };
+
 
 
 static void ClearCommand_Execute(const cc_string* args, int argsCount) {
