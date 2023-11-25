@@ -571,7 +571,7 @@ static void WeatherCommand_Execute(const cc_string* args, int argsCount) {
 
 }
 
-static struct ChatCommand TimeCommand = {
+static struct ChatCommand WeatherCommand = {
     "Weather", WeatherCommand_Execute,
     0,
     {
