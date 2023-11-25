@@ -104,14 +104,14 @@ jobs:
         if: matrix.config.plat == 'Windows' && matrix.config.bits == 64
         run: |
           msbuild src\ClassiCube.vcxproj `
-            -property:Configuration=Debug -property:Platform=x64 `
+            -property:Configuration=Release -property:Platform=x64 `
             -property:WindowsTargetPlatformVersion=10 -property:PlatformToolset=v142
 
       - name: Build for ${{ matrix.config.plat }} (${{ matrix.config.bits }} bit)
         if: matrix.config.plat == 'Windows' && matrix.config.bits == 32
         run: |
           msbuild src\ClassiCube.vcxproj `
-            -property:Configuration=Debug -property:Platform=Win32 `
+            -property:Configuration=Release -property:Platform=Win32 `
             -property:WindowsTargetPlatformVersion=10 -property:PlatformToolset=v142
      
       # Upload Artifacts for Windows
