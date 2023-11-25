@@ -566,7 +566,7 @@ static struct ChatCommand TimeCommand = {
 
 static void WeatherCommand_Execute(const cc_string* args, int argsCount) {
   int weather = 0;
-  Convert_ParseFloat(&args[0], &weather)
+  Convert_ParseFloat(&args[0], &weather);
   Env_SetWeather(weather);
 }
 
