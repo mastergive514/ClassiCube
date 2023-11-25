@@ -545,6 +545,8 @@ static struct ChatCommand HomeCommand = {
 };
 
 static void TimeCommand_Execute(const cc_string* args, int argsCount) {
+
+    
     // Get the current system time
     time_t currentTime;
     time(&currentTime);
@@ -572,14 +574,24 @@ void WeatherCommand_Execute(const cc_string* args, int argsCount) {
         return;
     }
 
+    int CustomStrICmp(const char* str1, const char* str2) {
+    while (*str1 && *str2) {
+        int cmp = toupper((unsigned char)*str1) - toupper((unsigned char)*str2);
+        if (cmp != 0) return cmp;
+        str1++;
+        str2++;
+    }
+    return toupper((unsigned char)*str1) - toupper((unsigned char)*str2);
+}
+
     const char* userInput = args[1].buffer;
     int raw = -1;
     for (int i = 0; i < sizeof(Weather_Names) / sizeof(Weather_Names[0]); i++) {
-        if (strcasecmp(userInput, Weather_Names[i]) == 0) {
-            raw = i;
-            break;
-        }
+    if (CustomStrICmp(userInput, Weather_Names[i]) == 0) {
+        raw = i;
+        break;
     }
+}
 
     if (raw != -1) {
         Env_SetWeather(raw);
