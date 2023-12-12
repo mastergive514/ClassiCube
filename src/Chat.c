@@ -959,6 +959,31 @@ static struct ChatCommand TeleportCommand = {
 	}
 };
 
+/*########################################################################################################################*
+*------------------------------------------------------Skin Command----------------------------------------------------*
+*#########################################################################################################################*/
+
+static void SkinCommand_Execute(const cc_string* args, int argsCount) {
+      struct LocalPlayer* p = &LocalPlayer_Instance;
+
+      if (argsCount < 2) {
+        Chat_AddRaw("Usage: /skin <name>");
+        return;
+    }
+
+    cc_string skinName = args[1];
+    Entity_SetSkin(p, skinName.buffer);
+
+}
+
+static struct ChatCommand SkinCommand = {
+	"Skin", TeleportCommand_Execute,
+	0,
+	{
+		"&a/client skin [skin name]",
+		"&eChange your skin using Classicube usernames!",
+	}
+};
 
 /*########################################################################################################################*
 *------------------------------------------------------BlockEditCommand----------------------------------------------------*
@@ -1115,6 +1140,7 @@ static void OnInit(void) {
         Commands_Register(&ClearCommand);
         Commands_Register(&HomeCommand);
 	Commands_Register(&WeatherCommand);
+	Commands_Register(&SkinCommand);
 
 
 
