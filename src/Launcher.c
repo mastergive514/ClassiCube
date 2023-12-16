@@ -299,13 +299,14 @@ void Launcher_Run(void) {
 *#########################################################################################################################*/
 struct LauncherTheme Launcher_Theme;
 const struct LauncherTheme Launcher_ModernTheme = {
-	false,
-	BitmapColor_RGB(153, 127, 172), /* background */
-	BitmapColor_RGB( 97,  81, 110), /* button border */
-	BitmapColor_RGB(189, 168, 206), /* active button */
-	BitmapColor_RGB(141, 114, 165), /* button foreground */
-	BitmapColor_RGB(162, 131, 186), /* button highlight */
+    false,
+    BitmapColor_RGB(80, 80, 80),    /* background (dark gray) */
+    BitmapColor_RGB(160, 160, 160), /* button border (light gray) */
+    BitmapColor_RGB(240, 240, 240), /* active button (very light gray) */
+    BitmapColor_RGB(255, 255, 255), /* button foreground (white) */
+    BitmapColor_RGB(200, 200, 200), /* button highlight (lighter gray) */
 };
+
 const struct LauncherTheme Launcher_ClassicTheme = {
 	true,
 	BitmapColor_RGB( 41,  41,  41), /* background */
