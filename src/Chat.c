@@ -550,7 +550,7 @@ static struct ChatCommand HomeCommand = {
 
 void WeatherCommand_Execute(const cc_string* args, int argsCount) {
     if (argsCount < 1) {
-        Chat_AddRaw("Usage: /weather [Sunny/Rainy/Snowy]\n");
+        Chat_AddRaw("&eUsage: /weather [Sunny/Rainy/Snowy]");
         return;
     }
 
@@ -559,7 +559,7 @@ void WeatherCommand_Execute(const cc_string* args, int argsCount) {
         Chat_AddRaw("&eWeather changed to &aSunny");
     } else if (String_CaselessEqualsConst(&args[0], "Rainy")) {
         Env_SetWeather(1);
-	Chat_AddRaw("&eWeather changed to a&Rainy");   
+	Chat_AddRaw("&eWeather changed to &aRainy");   
 		} else if (String_CaselessEqualsConst(&args[0], "Snowy")) {
         Env_SetWeather(2);
         Chat_AddRaw("&eWeather changed to &aSnowy");
@@ -669,7 +669,7 @@ static struct ChatCommand ClearCommand = {
 static void HacksCommand_Execute(const cc_string* args, int argsCount) {
     struct LocalPlayer* p = &LocalPlayer_Instance;
     // Check if the correct number of arguments is provided.
-    if (argsCount < 1) {
+    if (argsCount != 1) {
         Chat_AddRaw("&e/Hacks: &cTrue or False!!");
         return;
     }
@@ -966,8 +966,8 @@ static struct ChatCommand TeleportCommand = {
 static void SkinCommand_Execute(const cc_string* args, int argsCount) {
       struct LocalPlayer* p = &LocalPlayer_Instance;
 
-      if (argsCount < 2) {
-        Chat_AddRaw("Usage: /skin <name>");
+      if (argsCount != 1) {
+        Chat_AddRaw("Usage: /skin [skin name]");
         return;
     }
 
@@ -977,7 +977,7 @@ static void SkinCommand_Execute(const cc_string* args, int argsCount) {
 }
 
 static struct ChatCommand SkinCommand = {
-	"Skin", TeleportCommand_Execute,
+	"Skin", SkinCommand_Execute,
 	0,
 	{
 		"&a/client skin [skin name]",
