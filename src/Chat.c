@@ -1140,7 +1140,7 @@ static void OnInit(void) {
         Commands_Register(&ClearCommand);
         Commands_Register(&HomeCommand);
 	Commands_Register(&WeatherCommand);
-	Commands_Register(&SkinCommand);
+	
 
 
 
