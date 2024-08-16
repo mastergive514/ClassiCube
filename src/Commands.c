@@ -471,43 +471,77 @@ static struct ChatCommand ClearCommand = {
 };
 
 static void HacksCommand_Execute(const cc_string* args, int argsCount) {
-    struct LocalPlayer* p = &LocalPlayer_Instances;
+    struct LocalPlayer* p = (struct LocalPlayer*)Entities.List[255];
+
     // Check if the correct number of arguments is provided.
     if (argsCount != 1) {
-        Chat_AddRaw("&e/Hacks: &cTrue or False!!");
+        SendChat("&e/Hacks: &cTrue or False!!");
         return;
     }
 
-    if (String_CaselessEqualsConst(&args[0], "True")) {
+    if (String_CaselessEqualsConst(&args[0], "true")) {
+	p->Hacks.CanAnyHacks       = true;
 	p->Hacks.CanFly            = true;
 	p->Hacks.CanNoclip         = true;
 	p->Hacks.CanSpeed          = true;
 	p->Hacks.CanRespawn        = true;
 	p->Hacks.CanUseThirdPerson = true;
-        Chat_AddRaw("&eHacks Enabled!"); 
+	p->Hacks.CanPushbackBlocks = true;
+	p->Hacks.CanBePushed       = false;
+        SendChat("&eHacks Enabled!"); 
   }
-   else if (String_CaselessEqualsConst(&args[0], "False")) {
-       
+   else if (String_CaselessEqualsConst(&args[0], "false")) {
+	
+        p->Hacks.CanAnyHacks       = false;
 	p->Hacks.CanFly            = false;
 	p->Hacks.CanNoclip         = false;
 	p->Hacks.CanSpeed          = false;
 	p->Hacks.CanRespawn        = false;
 	p->Hacks.CanUseThirdPerson = false;
-        Chat_AddRaw("&eHacks Disabled!");
+	p->Hacks.CanPushbackBlocks = false;
+	p->Hacks.CanBePushed       = true;
+        SendChat("&eHacks Disabled!");
 
 }
   else {
-        Chat_AddRaw("&e/Hacks: &cInvalid argument. Use True or False.");
+        SendChat("&e/Hacks: &cInvalid argument. Use True or False.");
     }
 }
 
-static struct ChatCommand HacksCommand = {
-    "Hacks", HacksCommand_Execute,
-    COMMAND_FLAG_SINGLEPLAYER_ONLY,
+static struct ChatCommand HacksCmd = {
+    "Hacks", HacksCommand_Execute, false,
     {
         "/hacks (True/False)",
         "&cNote: &eOnly in Singleplayer",
     }
+};
+
+static void TP2Command_Execute(const cc_string* args, int argsCount) {
+    struct Entity* e = (struct Entity*)Entities.List[255];
+	struct LocationUpdate update;
+	Vec3 v;
+
+	if (argsCount != 3) {
+		SendChat("&e/client TP2: &cYou didn't specify X, Y and Z coordinates.");
+		return;
+	}
+	if (!Convert_ParseFloat(&args[0], &v.x) || !Convert_ParseFloat(&args[1], &v.y) || !Convert_ParseFloat(&args[2], &v.z)) {
+		SendChat("&e/client TP2: &cCoordinates must be decimals");
+		return;
+	}
+
+	update.flags = LU_HAS_POS;
+	update.pos   = v;
+	e->VTABLE->SetLocation(e, &update);
+}
+
+static struct ChatCommand TP2Cmd = {
+	"TP2", TP2Command_Execute, false,
+	{
+		"&a/client TP2 [x y z]",
+		"&eMoves you to the given coordinates, also works on Multiplayer.",
+                "&aShhh...",
+	}
 };
 
 
@@ -1020,9 +1054,10 @@ static void OnInit(void) {
 	Commands_Register(&CpeTestCommand);
 	Commands_Register(&KickCommand);
         Commands_Register(&JumpCommand);
-        Commands_Register(&HacksCommand);
+        Commands_Register(&HacksCmd);
         Commands_Register(&ClearCommand);
 	Commands_Register(&WeatherCommand);
+	Commands_Register(&TP2Cmd);
 }
 
 static void OnFree(void) {
