@@ -304,6 +304,226 @@ static struct ChatCommand MotdCommand = {
 	}
 };
 
+static void ReplaceallCommand_Execute(const cc_string* args, int argsCount) {
+    if (argsCount != 2) {
+        Chat_AddRaw("&cUsage: /replaceall [old] [new]"); return;
+    }
+    float old; float new;
+    Convert_ParseFloat(&args[0], &old); 
+    Convert_ParseFloat(&args[1], &new); 
+
+if(!Convert_ParseFloat(&args[0], &old) || !Convert_ParseFloat(&args[1], &new) ) {
+  Chat_AddRaw("&cMust be integers!");
+     return;
+    }
+
+if (old < 1) {
+
+  Chat_AddRaw("&cInvalid old value");
+  return;
+}
+
+
+for (int x = 0; x <= World.Length; x++) {
+for (int y = 0; y <= World.Height; y++) {
+for (int z = 0; z <= World.Width; z++) {
+
+BlockID block = World_SafeGetBlock(x, y, z);
+if (block == old) {
+Game_ChangeBlock(x, y, z, new);
+
+}
+}
+}
+}
+
+
+
+
+
+}
+
+
+static struct ChatCommand ReplaceallCommand = {
+    "Replaceall", ReplaceallCommand_Execute,
+    COMMAND_FLAG_SINGLEPLAYER_ONLY,
+    {
+        "&a/replaceall [old] [new]",
+        "&ereplaces [old] block to [new].",
+    }
+};
+
+static void CpeTestCommand_Execute(const cc_string* args, int argsCount) {
+    cc_string message = String_FromReadonly("Hello, World!");
+
+    Chat_AddOf(&message, MSG_TYPE_ANNOUNCEMENT);
+    Chat_AddOf(&message, MSG_TYPE_BIGANNOUNCEMENT);
+    Chat_AddOf(&message, MSG_TYPE_SMALLANNOUNCEMENT);
+    Chat_AddOf(&message, MSG_TYPE_STATUS_1);
+    Chat_AddOf(&message, MSG_TYPE_STATUS_2);
+    Chat_AddOf(&message, MSG_TYPE_STATUS_3);
+    Chat_AddOf(&message, MSG_TYPE_BOTTOMRIGHT_1);
+    Chat_AddOf(&message, MSG_TYPE_BOTTOMRIGHT_2);
+    Chat_AddOf(&message, MSG_TYPE_BOTTOMRIGHT_3);
+    Chat_AddRaw("Hello, World!");
+}
+
+static struct ChatCommand CpeTestCommand = {
+    "CpeTest", CpeTestCommand_Execute,
+    0,
+    {
+        "&a/CpeTest",
+        "&ePrints 'Hello, World!' with different message types",
+    }
+};
+
+static void KickCommand_Execute(const cc_string* args, int argsCount) {
+  cc_string reason = String_FromReadonly("&aThanks for playing come back soon!");
+  cc_string msg = String_FromReadonly("&cKicked by NovaCraft");
+  Game_Disconnect(&msg, &reason);
+
+}
+
+
+static struct ChatCommand KickCommand = {
+    "Kick", KickCommand_Execute,
+    0,
+    {
+        "&a/kick",
+        "&eKick You From the game!",
+    }
+};
+
+static void JumpCommand_Execute(const cc_string* args, int argsCount) {
+    struct Entity* e = &LocalPlayer_Instance.Base;
+    e->Velocity.Y = 0.42f;
+
+}
+
+static struct ChatCommand JumpCommand = {
+    "Jump", JumpCommand_Execute,
+    COMMAND_FLAG_SINGLEPLAYER_ONLY,
+    {
+        		"&a/client jump",
+		"&eJUMP!",
+                "&cNote: &eOnly in Singleplayer",
+    }
+};
+
+static void HomeCommand_Execute(const cc_string* args, int argsCount) {
+     LocalPlayer_HandleRespawn();
+
+}
+
+static struct ChatCommand HomeCommand = {
+    "Home", HomeCommand_Execute,
+    COMMAND_FLAG_SINGLEPLAYER_ONLY,
+    {
+        		"&a/client home",
+		"&eRespawn",
+                "&cNote: &eOnly in Singleplayer",
+    }
+};
+
+
+
+
+
+void WeatherCommand_Execute(const cc_string* args, int argsCount) {
+    if (argsCount < 1) {
+        Chat_AddRaw("&eUsage: /weather [Sunny/Rainy/Snowy]");
+        return;
+    }
+
+    if (String_CaselessEqualsConst(&args[0], "Sunny")) {
+        Env_SetWeather(0);
+        Chat_AddRaw("&eWeather changed to &aSunny");
+    } else if (String_CaselessEqualsConst(&args[0], "Rainy")) {
+        Env_SetWeather(1);
+	Chat_AddRaw("&eWeather changed to &aRainy");   
+		} else if (String_CaselessEqualsConst(&args[0], "Snowy")) {
+        Env_SetWeather(2);
+        Chat_AddRaw("&eWeather changed to &aSnowy");
+	   
+		}
+    else {
+        Chat_AddRaw("Invalid weather type. Please use Sunny, Rainy, or Snowy.");
+    }
+}
+
+static struct ChatCommand WeatherCommand = {
+    "Weather", WeatherCommand_Execute,
+    0,
+    {
+        "&a/client weather [Sunny/Rainy/Snowy]",
+        "&eChange The Weather :D",
+    }
+};
+
+
+
+static void ClearCommand_Execute(const cc_string* args, int argsCount) {
+    /* Ok, lets make this more better */
+    for (int i = 0; i != 20; i++){
+    Chat_AddRaw("");
+    }
+    Chat_AddRaw("");
+    
+    Chat_AddRaw("&cChat Cleared!");
+
+
+}
+
+static struct ChatCommand ClearCommand = {
+    "Clear", ClearCommand_Execute,
+    0,
+    {
+        		"&a/client clear",
+		"&eAlternative Clear Command (From MCGalaxy)",
+    }
+};
+
+static void HacksCommand_Execute(const cc_string* args, int argsCount) {
+    struct LocalPlayer* p = &LocalPlayer_Instance;
+    // Check if the correct number of arguments is provided.
+    if (argsCount != 1) {
+        Chat_AddRaw("&e/Hacks: &cTrue or False!!");
+        return;
+    }
+
+    if (String_CaselessEqualsConst(&args[0], "True")) {
+	p->Hacks.CanFly            = true;
+	p->Hacks.CanNoclip         = true;
+	p->Hacks.CanSpeed          = true;
+	p->Hacks.CanRespawn        = true;
+	p->Hacks.CanUseThirdPerson = true;
+        Chat_AddRaw("&eHacks Enabled!"); 
+  }
+   else if (String_CaselessEqualsConst(&args[0], "False")) {
+       
+	p->Hacks.CanFly            = false;
+	p->Hacks.CanNoclip         = false;
+	p->Hacks.CanSpeed          = false;
+	p->Hacks.CanRespawn        = false;
+	p->Hacks.CanUseThirdPerson = false;
+        Chat_AddRaw("&eHacks Disabled!");
+
+}
+  else {
+        Chat_AddRaw("&e/Hacks: &cInvalid argument. Use True or False.");
+    }
+}
+
+static struct ChatCommand HacksCommand = {
+    "Hacks", HacksCommand_Execute,
+    COMMAND_FLAG_SINGLEPLAYER_ONLY,
+    {
+        "/hacks (True/False)",
+        "&cNote: &eOnly in Singleplayer",
+    }
+};
+
+
 /*#######################################################################################################################*
 *-------------------------------------------------------PlaceCommand-----------------------------------------------------*
 *########################################################################################################################*/
@@ -809,6 +1029,14 @@ static void OnInit(void) {
 	Commands_Register(&BlockEditCommand);
 	Commands_Register(&CuboidCommand);
 	Commands_Register(&ReplaceCommand);
+	Commands_Register(&ReplaceallCommand);
+	Commands_Register(&CpeTestCommand);
+	Commands_Register(&KickCommand);
+        Commands_Register(&JumpCommand);
+        Commands_Register(&HacksCommand);
+        Commands_Register(&ClearCommand);
+        Commands_Register(&HomeCommand);
+	Commands_Register(&WeatherCommand);
 }
 
 static void OnFree(void) {
