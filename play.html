@@ -1,0 +1,61 @@
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div class="bg-zinc-900 text-white">
+    <div class="bg-purple-600 p-4 flex justify-between items-center">
+        <div class="flex items-center">
+            <img src="logo.png" alt="NovaCraft Logo" class="mr-2" style="width: 30; height: 30;">
+            <span class="text-2xl font-bold">NovaCraft</span>
+        </div>
+        <div class="space-x-4">
+            <a href="https://github.com/mastergive514/NovaCraft2" class="hover:underline">Github Page</a>
+            <a href="#" class="hover:underline">coming soon</a>
+            <a href="#" class="hover:underline">coming soon</a>
+            <a href="#" class="hover:underline">coming soon</a>
+        </div>
+    </div>
+
+
+<!-- the canvas *must not* have any border or padding, or mouse coords will be wrong -->
+<canvas id="canvas" style="display:block; border:0; padding:0; background-color: black;" 
+		oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+<span id="logmsg"></span>
+
+<script type='text/javascript'>
+  var Module = {
+    preRun: [],
+    postRun: [],
+    arguments: [ {username} ],
+    print: function(text) {
+      if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+      console.log(text);
+    },
+    printErr: function(text) {
+      if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+      console.error(text);
+    },
+    canvas: (function() { return document.getElementById('canvas'); })(),
+    setStatus: function(text) {
+      console.log(text);
+      document.getElementById('logmsg').innerHTML = text;
+    },
+    totalDependencies: 0,
+    monitorRunDependencies: function(left) {
+      this.totalDependencies = Math.max(this.totalDependencies, left);
+      Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+    }
+  };
+  Module.setStatus('Downloading...');
+  window.onerror = function(msg) {
+    // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+    Module.setStatus('Exception thrown, see JavaScript console (' + msg + ')');
+    Module.setStatus = function(text) {
+      if (text) Module.printErr('[post-exception status] ' + text);
+    };
+  };
+</script>
+<script async type="text/javascript" src="/static/classisphere.js"></script>

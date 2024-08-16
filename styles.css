@@ -1,0 +1,91 @@
+/* style.css */
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;
+	text-align: center;
+}
+
+h1 {
+    color: #333333;
+    text-align: center;
+    margin-top: 20px;
+}
+
+p {
+    color: #666666;
+    line-height: 1.6;
+    margin: 20px;
+}
+
+a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+ul {
+    list-style-type: square;
+    padding: 20px;
+}
+
+li {
+    margin: 5px 0;
+}
+
+img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 20px auto;
+}
+
+button {
+    margin: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+button:hover {
+    background-color: #0055aa;
+	text-align: center;
+}
+
+#target-section {
+    padding: 50px;
+    background-color: #ffffff;
+    border-top: 1px solid #cccccc;
+	text-align: center;
+}
+
+
+
+.logo-container {
+    display: inline-block;
+    vertical-align: middle; /* Aligns elements vertically */
+}
+
+.logo {
+    width: 100px; /* Adjust as needed */
+    height: auto;
+}
+
+h1 {
+    display: inline-block;
+    margin-left: 10px; /* Adjust spacing between the logo and text */
+}
+
+p {
+    display: block;
+    margin-top: 20px; /* Add space between the logo/text and the paragraph */
+}
