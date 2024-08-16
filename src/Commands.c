@@ -31,6 +31,9 @@ void Commands_Register(struct ChatCommand* cmd) {
 /*########################################################################################################################*
 *------------------------------------------------------Command handling---------------------------------------------------*
 *#########################################################################################################################*/
+
+#define SendChat(msg) const static cc_string str = String_FromConst(msg); Chat_Add(&str);
+
 static struct ChatCommand* Commands_FindMatch(const cc_string* cmdName) {
 	struct ChatCommand* match = NULL;
 	struct ChatCommand* cmd;
@@ -395,7 +398,7 @@ static struct ChatCommand KickCommand = {
 };
 
 static void JumpCommand_Execute(const cc_string* args, int argsCount) {
-    struct Entity* e = &LocalPlayer_Instances.Base;
+    struct Entity* e = (struct Entity*)Entities.List[255];
     e->Velocity.Y = 0.42f;
 
 }
