@@ -397,21 +397,6 @@ static struct ChatCommand KickCommand = {
     }
 };
 
-static void JumpCommand_Execute(const cc_string* args, int argsCount) {
-    struct Entity* e = (struct Entity*)Entities.List[255];
-    e->Velocity.Y = 0.42f;
-
-}
-
-static struct ChatCommand JumpCommand = {
-    "Jump", JumpCommand_Execute,
-    COMMAND_FLAG_SINGLEPLAYER_ONLY,
-    {
-        		"&a/client jump",
-		"&eJUMP!",
-                "&cNote: &eOnly in Singleplayer",
-    }
-};
 
 
 
@@ -1056,7 +1041,6 @@ static void OnInit(void) {
 	Commands_Register(&ReplaceallCommand);
 	Commands_Register(&CpeTestCommand);
 	Commands_Register(&KickCommand);
-        Commands_Register(&JumpCommand);
         Commands_Register(&HacksCmd);
         Commands_Register(&ClearCommand);
 	Commands_Register(&WeatherCommand);
