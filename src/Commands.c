@@ -395,7 +395,7 @@ static struct ChatCommand KickCommand = {
 };
 
 static void JumpCommand_Execute(const cc_string* args, int argsCount) {
-    struct Entity* e = &LocalPlayer_Instance.Base;
+    struct Entity* e = &LocalPlayer_Instances.Base;
     e->Velocity.Y = 0.42f;
 
 }
@@ -410,20 +410,7 @@ static struct ChatCommand JumpCommand = {
     }
 };
 
-static void HomeCommand_Execute(const cc_string* args, int argsCount) {
-     LocalPlayer_HandleRespawn();
 
-}
-
-static struct ChatCommand HomeCommand = {
-    "Home", HomeCommand_Execute,
-    COMMAND_FLAG_SINGLEPLAYER_ONLY,
-    {
-        		"&a/client home",
-		"&eRespawn",
-                "&cNote: &eOnly in Singleplayer",
-    }
-};
 
 
 
@@ -484,7 +471,7 @@ static struct ChatCommand ClearCommand = {
 };
 
 static void HacksCommand_Execute(const cc_string* args, int argsCount) {
-    struct LocalPlayer* p = &LocalPlayer_Instance;
+    struct LocalPlayer* p = &LocalPlayer_Instances;
     // Check if the correct number of arguments is provided.
     if (argsCount != 1) {
         Chat_AddRaw("&e/Hacks: &cTrue or False!!");
@@ -1035,7 +1022,6 @@ static void OnInit(void) {
         Commands_Register(&JumpCommand);
         Commands_Register(&HacksCommand);
         Commands_Register(&ClearCommand);
-        Commands_Register(&HomeCommand);
 	Commands_Register(&WeatherCommand);
 }
 
