@@ -1,4 +1,4 @@
-name: Build latest (Android2)
+ame: Build latest (Android2)
 on: [push]
 
 concurrency:
@@ -12,7 +12,7 @@ jobs:
     container:
       image: ghcr.io/saschpe/android-ndk:34-jdk17.0.8_7-ndk25.2.9519653-cmake3.22.1
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Compile android builds
         shell: bash
@@ -96,4 +96,11 @@ jobs:
         if: ${{ always() && steps.compile.outcome == 'success' }}
         with:
           SOURCE_FILE: 'src/cc.apk'
-          DEST_NAME: 'ClassiCube.apk'
+          DEST_NAME: 'cc.apk'
+          
+          
+      - uses: ./.github/actions/notify_success
+        if: ${{ always() && steps.compile.outcome == 'success' }}
+        with:
+          DESTINATION_URL: '${{ secrets.NOTIFY_URL }}'
+          WORKFLOW_NAME: 'android'
