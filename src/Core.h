@@ -1,6 +1,6 @@
 #ifndef CC_CORE_H
 #define CC_CORE_H
-/* 
+/*
 Core fixed-size integer types, automatic platform detection, and common small structs
 Copyright 2014-2023 ClassiCube | Licensed under BSD-3
 */
@@ -158,8 +158,6 @@ typedef cc_uint8  cc_bool;
 #define CC_BUILD_FREETYPE
 #define CC_BUILD_RESOURCES
 #define CC_BUILD_PLUGINS
-#define CC_BUILD_ANIMATIONS
-#define CC_BUILD_HELDBLOCK
 #define CC_BUILD_FILESYSTEM
 #define CC_BUILD_ADVLIGHTING
 /*#define CC_BUILD_GL11*/
@@ -180,6 +178,7 @@ typedef cc_uint8  cc_bool;
 	#define CC_BUILD_XBOX360
 	#define CC_BUILD_CONSOLE
 	#define CC_BUILD_LOWMEM
+	#define CC_BUILD_COOPTHREADED
 	#define CC_BUILD_NOMUSIC
 	#define CC_BUILD_NOSOUNDS
 	#define DEFAULT_NET_BACKEND CC_NET_BACKEND_BUILTIN
@@ -209,6 +208,14 @@ typedef cc_uint8  cc_bool;
 	#define DEFAULT_AUD_BACKEND CC_AUD_BACKEND_OPENAL
 	#define DEFAULT_GFX_BACKEND CC_GFX_BACKEND_GL1
 	#define DEFAULT_WIN_BACKEND CC_WIN_BACKEND_SDL2
+#elif defined MSDOS
+	#undef  CC_BUILD_FREETYPE
+	#define CC_BUILD_MSDOS
+	#define CC_BUILD_COOPTHREADED
+	#define CC_BUILD_LOWMEM
+	#define DEFAULT_NET_BACKEND CC_NET_BACKEND_BUILTIN
+	#define DEFAULT_GFX_BACKEND CC_GFX_BACKEND_SOFTGPU
+	#define DEFAULT_AUD_BACKEND CC_AUD_BACKEND_OPENAL
 #elif defined __linux__
 	#define CC_BUILD_LINUX
 	#define CC_BUILD_POSIX
@@ -380,6 +387,7 @@ typedef cc_uint8  cc_bool;
 	#define CC_BUILD_NOMUSIC
 	#define CC_BUILD_NOSOUNDS
 	#define CC_BUILD_SMALLSTACK
+	#define CC_BUILD_SPLITSCREEN
 	#undef  CC_BUILD_RESOURCES
 	#undef  CC_BUILD_NETWORKING
 	#undef  CC_BUILD_FILESYSTEM
@@ -402,7 +410,8 @@ typedef cc_uint8  cc_bool;
 	#define CC_BUILD_TOUCH
 	#define CC_BUILD_SMALLSTACK
 	#define DEFAULT_NET_BACKEND CC_NET_BACKEND_BUILTIN
-	#undef  CC_BUILD_ANIMATIONS /* Very costly in FPU less system */
+	#define CC_DISABLE_ANIMATIONS /* Very costly in FPU less system */
+	#define CC_BUILD_LOW_VRAM     /* Only ~640 kb of VRAM */
 	#undef  CC_BUILD_ADVLIGHTING
 #elif defined __WIIU__
 	#define CC_BUILD_WIIU
@@ -432,8 +441,8 @@ typedef cc_uint8  cc_bool;
 	#define CC_BUILD_NOSOUNDS
 	#undef  CC_BUILD_RESOURCES
 	#undef  CC_BUILD_NETWORKING
-	#undef  CC_BUILD_ANIMATIONS /* Very costly in FPU less system */
-	#undef  CC_BUILD_HELDBLOCK  /* Very costly in FPU less system */
+	#define CC_DISABLE_ANIMATIONS /* Very costly in FPU less system */
+	#define CC_DISABLE_HELDBLOCK  /* Very costly in FPU less system */
 	#undef  CC_BUILD_ADVLIGHTING
 	#undef  CC_BUILD_FILESYSTEM
 #elif defined OS2
@@ -442,7 +451,7 @@ typedef cc_uint8  cc_bool;
 	#define CC_BUILD_FREETYPE
 	#define DEFAULT_NET_BACKEND CC_NET_BACKEND_LIBCURL
 	#define DEFAULT_GFX_BACKEND CC_GFX_BACKEND_SOFTGPU
-	#define DEFAULT_WIN_BACKEND CC_WIN_BACKEND_SDL2
+	#define DEFAULT_WIN_BACKEND CC_WIN_BACKEND_OS2
 #elif defined PLAT_SATURN
 	#define CC_BUILD_SATURN
 	#define CC_BUILD_CONSOLE
@@ -455,10 +464,29 @@ typedef cc_uint8  cc_bool;
 	#define CC_BUILD_TINYSTACK
 	#undef  CC_BUILD_RESOURCES
 	#undef  CC_BUILD_NETWORKING
-	#undef  CC_BUILD_ANIMATIONS /* Very costly in FPU less system */
-	#undef  CC_BUILD_HELDBLOCK  /* Very costly in FPU less system */
+	#define CC_DISABLE_ANIMATIONS /* Very costly in FPU less system */
+	#define CC_DISABLE_HELDBLOCK  /* Very costly in FPU less system */
 	#undef  CC_BUILD_ADVLIGHTING
 	#undef  CC_BUILD_FILESYSTEM
+#elif defined PLAT_32X
+	#define CC_BUILD_32X
+	#define CC_BUILD_CONSOLE
+	#define CC_BUILD_LOWMEM
+	#define CC_BUILD_TINYMEM
+	#define CC_BUILD_COOPTHREADED
+	#define CC_BUILD_NOMUSIC
+	#define CC_BUILD_NOSOUNDS
+	#define CC_BUILD_SMALLSTACK
+	#define CC_BUILD_TINYSTACK
+	#undef  CC_BUILD_RESOURCES
+	#undef  CC_BUILD_NETWORKING
+	#define CC_DISABLE_ANIMATIONS /* Very costly in FPU less system */
+	#define CC_DISABLE_HELDBLOCK  /* Very costly in FPU less system */
+	#undef  CC_BUILD_ADVLIGHTING
+	#undef  CC_BUILD_FILESYSTEM
+	#define CC_GFX_BACKEND CC_GFX_BACKEND_SOFTGPU
+	#define CC_DISABLE_EXTRA_MODELS
+	#define SOFTGPU_DISABLE_ZBUFFER
 #endif
 #endif
 
@@ -490,7 +518,9 @@ typedef cc_uint8  cc_bool;
 #ifndef CC_BUILD_LOWMEM
 #define EXTENDED_BLOCKS
 #endif
+#ifndef CC_BUILD_TINYMEM
 #define EXTENDED_TEXTURES
+#endif
 
 #ifdef EXTENDED_BLOCKS
 typedef cc_uint16 BlockID;

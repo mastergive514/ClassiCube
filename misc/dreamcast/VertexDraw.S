@@ -502,7 +502,6 @@ _Case_1_1_1_1:
 
 .global _ProcessVertexList
 .align 4
-.type  _ProcessVertexList,%function
 _ProcessVertexList:
 ! STORE CPU REGISTERS
 	mov.l    r8,@-r15
@@ -524,7 +523,7 @@ _ProcessVertexList:
 	bra     SUBMIT_LOOP
 	add    #-64,r15
 
-! Submits a PowerVR GPU command
+! Submits a PVR2 TA GPU command
 DO_CMD:
 	PushVertex REG_V0
 	bra     NEXT_ITER
@@ -544,7 +543,6 @@ SUBMIT_LOOP:
 	bf.s    DO_CMD    ! if (!T) goto DO_CMD
 ! PVR_CMD_VERTEX_EOL case
 	extu.b  r0,r1     ! EX, MASK = FLAGS & 0xFF (branch delay slot)
-	mov.l   r11,@r13  ! LS, CUR->flags = PVR_CMD_VERTEX_EOL
 
 ! Prepare and then jump to quad drawing function, based on quad clipflags
 	mova    .CASES,r0   ! LS, r0 = CASES
@@ -574,6 +572,8 @@ NEXT_ITER:
 	mov.l   @r15+,r9
 	rts     
 	mov.l   @r15+,r8
+.size _ProcessVertexList, .-_ProcessVertexList
+.type _ProcessVertexList, %function
 
 .align 4
 .VP_1:

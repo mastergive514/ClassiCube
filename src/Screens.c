@@ -405,9 +405,9 @@ static void HUDScreen_Render(void* screen, float delta) {
 
 	if (!Gui_GetBlocksWorld()) {
 		Gfx_BindDynamicVb(s->vb);
-		Widget_Render2(&s->hotbar, 12);
+		if (!Gui.HideHotbar) Widget_Render2(&s->hotbar, 12);
 
-		if (Gui.IconsTex && !tablist_active) {
+		if (!Gui.HideCrosshair && Gui.IconsTex && !tablist_active) {
 			Gfx_BindTexture(Gui.IconsTex);
 			Gfx_BindDynamicVb(s->vb); /* Have to rebind for mobile right now... */
 			Gfx_DrawVb_IndexedTris(4);
@@ -435,6 +435,7 @@ void HUDScreen_Show(void) {
 /*########################################################################################################################*
 *----------------------------------------------------TabListOverlay-----------------------------------------------------*
 *#########################################################################################################################*/
+#ifdef CC_BUILD_NETWORKING
 #define GROUP_NAME_ID UInt16_MaxValue
 #define LIST_COLUMN_PADDING 5
 #define LIST_NAMES_PER_COLUMN 16
@@ -883,6 +884,9 @@ void TabListOverlay_Show(cc_bool staysOpen) {
 	s->staysOpen = staysOpen;
 	Gui_Add((struct Screen*)s, GUI_PRIORITY_TABLIST);
 }
+#else
+void TabListOverlay_Show(cc_bool staysOpen) { }
+#endif
 
 
 /*########################################################################################################################*

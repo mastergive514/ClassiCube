@@ -1,6 +1,8 @@
 #ifndef CC_GUI_H
 #define CC_GUI_H
 #include "Core.h"
+#include "PackedCol.h"
+
 CC_BEGIN_HEADER
 
 /* Describes and manages 2D GUI elements on screen.
@@ -54,8 +56,18 @@ CC_VAR extern struct _GuiData {
 	struct Screen* InputGrab;
 	/* Whether chat automatically scales based on window size. */
 	cc_bool AutoScaleChat;
-	/* Whether the touch UI is currently being displayed */
+	/* Whether the touch UI is currently being displayed. */
 	cc_bool TouchUI;
+	/* Whether the first person crosshair should be hidden. */
+	cc_bool HideCrosshair;
+	/* Whether the player hand/block model should be hidden. */
+	cc_bool HideHand;
+	/* Whether the hotbar should be hidden. */
+	cc_bool HideHotbar;
+	/* The height of the cinematic bars, where 0 = no bars visible and 1 = bars completely cover the screen. */
+	float BarSize;
+	/* The color of the cinematic bars, if enabled. */
+	PackedCol CinematicBarColor;
 } Gui;
 
 #ifdef CC_BUILD_TOUCH
@@ -251,9 +263,6 @@ void Gui_ShowDefault(void);
 void Gui_SetTouchUI(cc_bool enabled);
 #endif
 
-/* (internal) Removes the screen from the screens list. */
-/* NOTE: This does NOT perform the usual 'screens changed' behaviour. */
-void Gui_RemoveCore(struct Screen* s);
 /* Removes the screen from the screens list. */
 CC_API void Gui_Remove(struct Screen* screen);
 /* Inserts a screen into the screen lists with the given priority. */

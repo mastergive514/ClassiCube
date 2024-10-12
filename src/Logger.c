@@ -18,6 +18,10 @@
 	
 	#include <windows.h>
 	#include <imagehlp.h>
+	/* Compatibility version so compiling works on older Windows SDKs */
+	#include "../misc/windows/min-imagehlp.h"
+	#define CC_KERN32_FUNC extern /* main use is Platform_Windows.c */
+	#include "../misc/windows/min-kernel32.h"
 	static HANDLE curProcess = CUR_PROCESS_HANDLE;
 #elif defined CC_BUILD_OPENBSD || defined CC_BUILD_HAIKU || defined CC_BUILD_SERENITY
 	#include <signal.h>
@@ -203,8 +207,6 @@ static void PrintFrame(cc_string* str, cc_uintptr addr, cc_uintptr symAddr, cons
 
 #if defined CC_BUILD_WIN
 struct SymbolAndName { IMAGEHLP_SYMBOL symbol; char name[256]; };
-static BOOL (WINAPI *_SymGetSymFromAddr)(HANDLE process, DWORD_PTR addr, DWORD_PTR* displacement, IMAGEHLP_SYMBOL* sym);
-static BOOL (WINAPI *_SymGetModuleInfo) (HANDLE process, DWORD_PTR addr, IMAGEHLP_MODULE* module);
 
 static void DumpFrame(HANDLE process, cc_string* trace, cc_uintptr addr) {
 	char strBuffer[512]; cc_string str;
@@ -232,7 +234,7 @@ static void DumpFrame(HANDLE process, cc_string* trace, cc_uintptr addr) {
 	{
 		IMAGEHLP_LINE line = { 0 }; DWORD lineOffset;
 		line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
-		if (SymGetLineFromAddr(process, addr, &lineOffset, &line)) {
+		if (_SymGetLineFromAddr(process, addr, &lineOffset, &line)) {
 			String_Format2(&str, "  line %i in %c\r\n", &line.LineNumber, line.FileName);
 		}
 	}
@@ -277,6 +279,10 @@ static void DumpFrame(cc_string* trace, void* addr) {
 	String_AppendString(trace, &str);
 	Logger_Log(&str);
 }
+#elif defined CC_BUILD_OS2
+static void DumpFrame(cc_string* trace, void* addr) {
+// TBD
+}
 #else
 /* No backtrace support implemented */
 #endif
@@ -286,16 +292,13 @@ static void DumpFrame(cc_string* trace, void* addr) {
 *-------------------------------------------------------Backtracing-------------------------------------------------------*
 *#########################################################################################################################*/
 #if defined CC_BUILD_WIN
-static DWORD_PTR (WINAPI *_SymGetModuleBase)(HANDLE process, DWORD_PTR addr);
-static PVOID     (WINAPI *_SymFunctionTableAccess)(HANDLE process, DWORD_PTR addr);
-static BOOL      (WINAPI *_SymInitialize)(HANDLE process, PCSTR userSearchPath, BOOL fInvadeProcess);
 
-static PVOID WINAPI FunctionTableAccessCallback(HANDLE process, DWORD_PTR addr) {
+static PVOID WINAPI FunctionTableAccessCallback(HANDLE process, _DWORD_PTR addr) {
 	if (!_SymFunctionTableAccess) return NULL;
 	return _SymFunctionTableAccess(process, addr);
 }
 
-static DWORD_PTR WINAPI GetModuleBaseCallback(HANDLE process, DWORD_PTR addr) {
+static _DWORD_PTR WINAPI GetModuleBaseCallback(HANDLE process, _DWORD_PTR addr) {
 	if (!_SymGetModuleBase) return 0;
 	return _SymGetModuleBase(process, addr);
 }
@@ -306,7 +309,7 @@ static DWORD_PTR WINAPI GetModuleBaseCallback(HANDLE process, DWORD_PTR addr) {
 /*  - if NULL is passed as the "ReadMemory" argument, the default callback using ReadProcessMemory is used */
 /*  - however, ReadProcessMemory expects a process handle, and so that will fail since it's given a process ID */
 /* So to work around this, instead manually call ReadProcessMemory with the current process handle */
-static BOOL __stdcall ReadMemCallback(HANDLE process, DWORD_PTR baseAddress, PVOID buffer, DWORD size, PDWORD numBytesRead) {
+static BOOL WINAPI ReadMemCallback(HANDLE process, _DWORD_PTR baseAddress, PVOID buffer, DWORD size, DWORD* numBytesRead) {
 	SIZE_T numRead = 0;
 	BOOL ok = ReadProcessMemory(CUR_PROCESS_HANDLE, (LPCVOID)baseAddress, buffer, size, &numRead);
 	
@@ -341,10 +344,11 @@ static int GetFrames(CONTEXT* ctx, cc_uintptr* addrs, int max) {
 	return RtlCaptureStackBackTrace(0, max, (void**)addrs, NULL);
 #endif
 	thread = GetCurrentThread();
+	if (!_StackWalk) return 0;
 
 	for (count = 0; count < max; count++) 
 	{
-		if (!StackWalk(type, curProcess, thread, &frame, ctx, ReadMemCallback, 
+		if (!_StackWalk(type, curProcess, thread, &frame, ctx, ReadMemCallback, 
 						FunctionTableAccessCallback, GetModuleBaseCallback, NULL)) break;
 		if (!frame.AddrFrame.Offset) break;
 		addrs[count] = frame.AddrPC.Offset;
@@ -949,7 +953,7 @@ static void DumpStack(void) {
 	}
 }
 
-static BOOL CALLBACK DumpModule(const char* name, ULONG_PTR base, ULONG size, void* userCtx) {
+static BOOL WINAPI DumpModule(const char* name, ULONG_PTR base, ULONG size, void* userCtx) {
 	cc_string str; char strBuffer[256];
 	cc_uintptr beg, end;
 
@@ -960,7 +964,7 @@ static BOOL CALLBACK DumpModule(const char* name, ULONG_PTR base, ULONG size, vo
 	Logger_Log(&str);
 	return true;
 }
-static BOOL  (WINAPI *_EnumerateLoadedModules)(HANDLE process, PENUMLOADED_MODULES_CALLBACK callback, PVOID userContext);
+
 static void DumpMisc(void) {
 	static const cc_string modules = String_FromConst("-- modules --\r\n");
 	if (spRegister >= 0xFFFF) DumpStack();
@@ -1115,29 +1119,9 @@ static LONG WINAPI UnhandledFilter(struct _EXCEPTION_POINTERS* info) {
 }
 
 void Logger_Hook(void) {
-	static const struct DynamicLibSym funcs[] = {
-	#ifdef _IMAGEHLP64
-		{ "EnumerateLoadedModules64", (void**)&_EnumerateLoadedModules},
-		{ "SymFunctionTableAccess64", (void**)&_SymFunctionTableAccess},
-		{ "SymGetModuleBase64",       (void**)&_SymGetModuleBase },
-		{ "SymGetModuleInfo64",       (void**)&_SymGetModuleInfo },
-		{ "SymGetSymFromAddr64",      (void**)&_SymGetSymFromAddr },
-		{ "SymInitialize",            (void**)&_SymInitialize },
-	#else
-		{ "EnumerateLoadedModules",   (void**)&_EnumerateLoadedModules },
-		{ "SymFunctionTableAccess",   (void**)&_SymFunctionTableAccess },
-		{ "SymGetModuleBase",         (void**)&_SymGetModuleBase },
-		{ "SymGetModuleInfo",         (void**)&_SymGetModuleInfo },
-		{ "SymGetSymFromAddr",        (void**)&_SymGetSymFromAddr },
-		{ "SymInitialize",            (void**)&_SymInitialize },
-	#endif
-	};
-	static const cc_string imagehlp = String_FromConst("IMAGEHLP.DLL");
 	OSVERSIONINFOA osInfo;
-	void* lib;
-
 	SetUnhandledExceptionFilter(UnhandledFilter);
-	DynamicLib_LoadAll(&imagehlp, funcs, Array_Elems(funcs), &lib);
+	ImageHlp_LoadDynamicFuncs();
 
 	/* Windows 9x requires process IDs instead - see old DBGHELP docs */
 	/*   https://documentation.help/DbgHelp/documentation.pdf */
@@ -1224,6 +1208,7 @@ void __attribute__((optimize("O0"))) Logger_Abort2(cc_result result, const char*
 void Logger_Abort2(cc_result result, const char* raw_msg) {
 #endif
 	CONTEXT ctx;
+	CONTEXT* ctx_ptr;
 	#if _M_IX86 && __GNUC__
 	/* Stack frame layout on x86: */
 	/*  [ebp] is previous frame's EBP */
@@ -1241,14 +1226,16 @@ void Logger_Abort2(cc_result result, const char* raw_msg) {
 		: "eax", "memory"
 	);
 	ctx.ContextFlags = CONTEXT_CONTROL;
+	ctx_ptr = &ctx;
 	#else
-	/* This method is guaranteed to exist on 64 bit windows.  */
-	/* NOTE: This is missing in 32 bit Windows 2000 however,  */
-	/*  so an alternative is provided for MinGW above so that */
-	/*  the game can be cross-compiled for Windows 98 / 2000  */
-	RtlCaptureContext(&ctx);
+	/* This method is guaranteed to exist on 64 bit windows. */
+	/* NOTE: This is missing in 32 bit Windows 2000 however  */
+	if (_RtlCaptureContext) {
+		_RtlCaptureContext(&ctx);
+		ctx_ptr = &ctx;
+	} else { ctx_ptr = NULL; }
 	#endif
-	AbortCommon(result, raw_msg, &ctx);
+	AbortCommon(result, raw_msg, ctx_ptr);
 }
 #else
 void Logger_Abort2(cc_result result, const char* raw_msg) {
@@ -1332,14 +1319,14 @@ static void AbortCommon(cc_result result, const char* raw_msg, void* ctx) {
 	Logger_Log(&msg);
 
 	String_AppendConst(&msg, "Full details of the crash have been logged to 'client.log'.\n");
-	String_AppendConst(&msg, "Please report this on the ClassiCube forums or to UnknownShadow200.\n\n");
+	String_AppendConst(&msg, "Please report this on the ClassiCube forums or Discord.\n\n");
 	if (ctx) DumpRegisters(ctx);
 
 	/* These two function calls used to be in a separate DumpBacktrace function */
 	/*  However that was not always inlined by the compiler, which resulted in a */
 	/*  useless strackframe being logged - so manually inline Logger_Backtrace call */
 	Logger_Log(&backtrace);
-	Logger_Backtrace(&msg, ctx);
+	if (ctx) Logger_Backtrace(&msg, ctx);
 
 	DumpMisc();
 	CloseLogFile();

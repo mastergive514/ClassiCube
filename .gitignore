@@ -93,11 +93,16 @@ ClassiCube*
 screenshots
 fontscache.txt
 
+# DOS files
+CWSDPMI.EXE
+CWSDPMI.SWP
+OPTIONS.TXT
+
 # Android source files need to be included
 !android/app/src/main/java/com/classicube
 
 # Flatpak wrapper which needs to be included
-!misc/linux/flatpak/ClassiCubeLauncher
+!misc/flatpak/ClassiCubeLauncher
 
 # CMake files
 CMakeFiles/
@@ -154,6 +159,11 @@ openvcl/
 *.pidb
 *.svclog
 *.scc
+*.map
+
+# Binary files
+*.bin
+*.elf
 
 # Visual C++ cache files
 ipch/

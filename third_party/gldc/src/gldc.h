@@ -2,31 +2,52 @@
 #define PRIVATE_H
 
 #include <stdint.h>
-#include "aligned_vector.h"
+#include <assert.h>
+#include <string.h>
+#include <stdint.h>
+#include <malloc.h>
 
-#define MAX_TEXTURE_COUNT 768
+#define AV_FORCE_INLINE static __attribute__((always_inline)) inline
+#define VERTEX_SIZE 32
 
-#define GL_NEAREST          0x2600
-#define GL_LINEAR           0x2601
-#define GL_OUT_OF_MEMORY    0x0505
+typedef struct {
+    uint32_t size;
+    uint32_t capacity;
+    uint32_t list_type;
+    uint8_t* data;
+} __attribute__((aligned(32))) AlignedVector;
 
-#define GLushort   unsigned short
-#define GLuint     unsigned int
+#define ALIGNED_VECTOR_CHUNK_SIZE 256u
+
+#define ROUND_TO_CHUNK_SIZE(v) \
+    ((((v) + ALIGNED_VECTOR_CHUNK_SIZE - 1) / ALIGNED_VECTOR_CHUNK_SIZE) * ALIGNED_VECTOR_CHUNK_SIZE)
+
+AV_FORCE_INLINE void* aligned_vector_reserve(AlignedVector* vector, uint32_t element_count) {
+    uint32_t original_byte_size = (vector->size * VERTEX_SIZE);
+
+    if(element_count < vector->capacity) {
+        return vector->data + original_byte_size;
+    }
+
+    /* We overallocate so that we don't make small allocations during push backs */
+    element_count = ROUND_TO_CHUNK_SIZE(element_count);
+
+    uint32_t new_byte_size = (element_count * VERTEX_SIZE);
+    uint8_t* original_data = vector->data;
+
+    uint8_t* data = (uint8_t*) memalign(0x20, new_byte_size);
+    if (!data) return NULL;
+
+    memcpy(data, original_data, original_byte_size);
+    free(original_data);
+
+	vector->data     = data;
+    vector->capacity = element_count;
+    return data + original_byte_size;
+}
+
 #define GLenum     unsigned int
-#define GLubyte    unsigned char
 #define GLboolean  unsigned char
-
-
-GLuint gldcGenTexture(void);
-void   gldcDeleteTexture(GLuint texture);
-void   gldcBindTexture(GLuint texture);
-
-/* Loads texture from SH4 RAM into PVR VRAM */
-int  gldcAllocTexture(int w, int h, int format);
-void gldcGetTexture(void** data, int* width, int* height);
-
-void glKosInit();
-void glKosSwapBuffers();
 
 typedef struct {
     /* Same 32 byte layout as pvr_vertex_t */
@@ -41,35 +62,12 @@ typedef struct {
     float w;
 } __attribute__ ((aligned (32))) Vertex;
 
-
-#define GL_FORCE_INLINE static __attribute__((always_inline)) inline
-
 typedef struct {
-    //0
-    GLuint   index;
-    GLuint   color; /* This is the PVR texture format */
-    //8
-    GLenum minFilter;
-    GLenum magFilter;
-    //16
-    void *data;
-    //20
-    GLushort width;
-    GLushort height;
-    // 24
-    GLushort  mipmap;  /* Bitmask of supplied mipmap levels */
-    // 26
-    GLubyte mipmap_bias;
-    GLubyte _pad3;
-    // 28
-    GLushort _pad0;
-    // 30
-    GLubyte _pad1;
-    GLubyte _pad2;
-} __attribute__((aligned(32))) TextureObject;
-
-
-void _glInitTextures();
+    uint32_t color; /* This is the PVR texture format */
+    void     *data;
+    uint16_t width;
+    uint16_t height;
+} TextureObject;
 
 extern TextureObject* TEXTURE_ACTIVE;
 extern GLboolean TEXTURES_ENABLED;
@@ -87,27 +85,6 @@ extern GLboolean SCISSOR_TEST_ENABLED;
 extern GLenum SHADE_MODEL;
 extern GLboolean AUTOSORT_ENABLED;
 
-
-extern AlignedVector OP_LIST;
-extern AlignedVector PT_LIST;
-extern AlignedVector TR_LIST;
-
-GL_FORCE_INLINE AlignedVector* _glActivePolyList() {
-    if (BLEND_ENABLED)      return &TR_LIST;
-    if (ALPHA_TEST_ENABLED) return &PT_LIST;
-
-    return &OP_LIST;
-}
-
-/* Memory allocation extension (GL_KOS_texture_memory_management) */
-void glDefragmentTextureMemory_KOS(void);
-
-GLuint _glFreeTextureMemory(void);
-GLuint _glUsedTextureMemory(void);
-GLuint _glFreeContiguousTextureMemory(void);
-
-extern GLboolean STATE_DIRTY;
-
-void SceneListSubmit(Vertex* v2, int n, int type);
+void SceneListSubmit(Vertex* v2, int n);
 
 #endif // PRIVATE_H

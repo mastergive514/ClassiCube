@@ -4,9 +4,15 @@ C_SOURCES   = $(wildcard $(SOURCE_DIR)/*.c)
 C_OBJECTS   = $(patsubst $(SOURCE_DIR)/%.c, $(BUILD_DIR)/%.o, $(C_SOURCES))
 
 OBJECTS = $(C_OBJECTS)
-ENAME   = ClassiCube
-CFLAGS  = -pipe -fno-math-errno -Werror -Wno-error=missing-braces -Wno-error=strict-aliasing -Wno-error=maybe-uninitialized
+# Flags passed to the C compiler
+CFLAGS  = -pipe -fno-math-errno -Werror -Wno-error=missing-braces -Wno-error=strict-aliasing
+# Flags passed to the linker
 LDFLAGS = -g -rdynamic
+# Name of the main executable
+ENAME   = ClassiCube
+# Name of the final target file
+# (usually this is the executable, but e.g. is app bundle on macOS)
+TARGET := $(ENAME)
 
 ifndef RM
 	# No prefined RM variable, try to guess OS default
@@ -43,7 +49,7 @@ ifeq ($(PLAT),mingw)
 	OEXT    =  .exe
 	CFLAGS  += -DUNICODE
 	LDFLAGS =  -g
-	LIBS    =  -mwindows -lwinmm -limagehlp
+	LIBS    =  -mwindows -lwinmm
 	BUILD_DIR = build-win
 endif
 
@@ -65,6 +71,7 @@ ifeq ($(PLAT),darwin)
 	LIBS    =
 	LDFLAGS =  -rdynamic -framework Cocoa -framework OpenGL -framework IOKit -lobjc
 	BUILD_DIR = build-macos
+	TARGET  = $(ENAME).app
 endif
 
 ifeq ($(PLAT),freebsd)
@@ -123,6 +130,14 @@ ifeq ($(PLAT),irix)
 	BUILD_DIR = build-irix
 endif
 
+ifeq ($(PLAT),dos)
+	CC	=  i586-pc-msdosdjgpp-gcc 
+	LIBS    =
+	LDFLAGS = -g
+	OEXT    =  .exe
+	BUILD_DIR = build-dos
+endif
+
 
 ifdef SDL2
 	CFLAGS += -DCC_WIN_BACKEND=CC_WIN_BACKEND_SDL2
@@ -153,41 +168,42 @@ endif
 default: $(PLAT)
 
 web:
-	$(MAKE) $(ENAME) PLAT=web
+	$(MAKE) $(TARGET) PLAT=web
 linux:
-	$(MAKE) $(ENAME) PLAT=linux
+	$(MAKE) $(TARGET) PLAT=linux
 mingw:
-	$(MAKE) $(ENAME) PLAT=mingw
+	$(MAKE) $(TARGET) PLAT=mingw
 sunos:
-	$(MAKE) $(ENAME) PLAT=sunos
+	$(MAKE) $(TARGET) PLAT=sunos
 darwin:
-	$(MAKE) $(ENAME) PLAT=darwin
+	$(MAKE) $(TARGET) PLAT=darwin
 freebsd:
-	$(MAKE) $(ENAME) PLAT=freebsd
+	$(MAKE) $(TARGET) PLAT=freebsd
 openbsd:
-	$(MAKE) $(ENAME) PLAT=openbsd
+	$(MAKE) $(TARGET) PLAT=openbsd
 netbsd:
-	$(MAKE) $(ENAME) PLAT=netbsd
+	$(MAKE) $(TARGET) PLAT=netbsd
 dragonfly:
-	$(MAKE) $(ENAME) PLAT=dragonfly
+	$(MAKE) $(TARGET) PLAT=dragonfly
 haiku:
-	$(MAKE) $(ENAME) PLAT=haiku
+	$(MAKE) $(TARGET) PLAT=haiku
 beos:
-	$(MAKE) $(ENAME) PLAT=beos
+	$(MAKE) $(TARGET) PLAT=beos
 serenityos:
-	$(MAKE) $(ENAME) PLAT=serenityos
+	$(MAKE) $(TARGET) PLAT=serenityos
 irix:
-	$(MAKE) $(ENAME) PLAT=irix
-
+	$(MAKE) $(TARGET) PLAT=irix
+dos:
+	$(MAKE) $(TARGET) PLAT=dos
 # Default overrides
 sdl2:
-	$(MAKE) $(ENAME) SDL2=1
+	$(MAKE) $(TARGET) SDL2=1
 sdl3:
-	$(MAKE) $(ENAME) SDL3=1
+	$(MAKE) $(TARGET) SDL3=1
 terminal:
-	$(MAKE) $(ENAME) TERMINAL=1
+	$(MAKE) $(TARGET) TERMINAL=1
 release:
-	$(MAKE) $(ENAME) RELEASE=1
+	$(MAKE) $(TARGET) RELEASE=1
 
 # Some builds require more complex handling, so are moved to
 #  separate makefiles to avoid having one giant messy makefile
@@ -234,11 +250,19 @@ macclassic_ppc:
 clean:
 	$(RM) $(OBJECTS)
 
-
-$(ENAME): $(BUILD_DIR) $(OBJECTS)
-	$(CC) $(LDFLAGS) -o $@$(OEXT) $(OBJECTS) $(EXTRA_LIBS) $(LIBS)
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
+$(ENAME): $(BUILD_DIR) $(OBJECTS)
+	$(CC) $(LDFLAGS) -o $@$(OEXT) $(OBJECTS) $(EXTRA_LIBS) $(LIBS)
+
+
+# macOS app bundle
+$(ENAME).app : $(ENAME)
+	mkdir -p $(TARGET)/Contents/MacOS
+	mkdir -p $(TARGET)/Contents/Resources
+	cp $(ENAME) $(TARGET)/Contents/MacOS/$(ENAME)
+	cp misc/macOS/Info.plist   $(TARGET)/Contents/Info.plist
+	cp misc/macOS/appicon.icns $(TARGET)/Contents/Resources/appicon.icns
 
 
 # === Compiling with dependency tracking ===

@@ -1678,11 +1678,12 @@ static cc_bool TextInputWidget_AllowedChar(void* widget, char c) {
 	return valid;
 }
 
-void TextInputWidget_OpenKeyboard(struct TextInputWidget* w) {
+void TextInputWidget_OpenKeyboard(struct TextInputWidget* w, struct InputDevice* device) {
 	struct OpenKeyboardArgs args;
 
 	OpenKeyboardArgs_Init(&args, &w->base.text, w->onscreenType);
 	args.placeholder = w->onscreenPlaceholder;
+	args.device      = device;
 	OnscreenKeyboard_Open(&args);
 }
 
@@ -1691,7 +1692,7 @@ static int TextInputWidget_KeyDown(void* widget, int key, struct InputDevice* de
 	struct MenuInputDesc* desc = &w->desc;
 
 	if (Window_Main.SoftKeyboard && !DisplayInfo.ShowingSoftKeyboard && InputDevice_IsEnter(key, device)) { 
-		TextInputWidget_OpenKeyboard(w); return true; 
+		TextInputWidget_OpenKeyboard(w, device); return true; 
 	}
 	if (InputWidget_KeyDown(&w->base, key, device)) return true;
 
@@ -1701,7 +1702,7 @@ static int TextInputWidget_KeyDown(void* widget, int key, struct InputDevice* de
 static int TextInputWidget_PointerDown(void* widget, int id, int x, int y) {
 	struct TextInputWidget* w = (struct TextInputWidget*)widget;
 
-	TextInputWidget_OpenKeyboard(w);
+	TextInputWidget_OpenKeyboard(w, NULL);
 	w->base.showCaret = true;
 	return InputWidget_PointerDown(widget, id, x, y);
 }
@@ -2215,10 +2216,19 @@ static int TextGroupWidget_Reduce(struct TextGroupWidget* w, char* chars, int ta
 	return (int)(portions - start);
 }
 
+static void TextGroupWidget_RemoveColorPrefix(cc_string* text, int i) {
+	/* Delete leading colour code if present */
+	if (i + 2 > text->length || text->buffer[i] != '&') return;
+	if (!Drawer2D_ValidColorCodeAt(text, i + 1)) return;
+
+	String_DeleteAt(text, i + 1); 
+	String_DeleteAt(text, i);
+}
+
 static void TextGroupWidget_FormatUrl(cc_string* text, const cc_string* url) {
 	char* dst;
 	int i;
-	String_AppendColorless(text, url);
+	String_AppendString(text, url);
 
 	/* Delete "> " multiline chars from URLs */
 	dst = text->buffer;
@@ -2228,7 +2238,12 @@ static void TextGroupWidget_FormatUrl(cc_string* text, const cc_string* url) {
 
 		String_DeleteAt(text, i + 1);
 		String_DeleteAt(text, i);
+		/* Delete leading multiline colour code if present */
+		TextGroupWidget_RemoveColorPrefix(text, i);
 	}
+
+	/* Delete leading colour code if present */
+	TextGroupWidget_RemoveColorPrefix(text, 0);
 }
 
 static cc_bool TextGroupWidget_GetUrl(struct TextGroupWidget* w, cc_string* text, int index, int mouseX) {

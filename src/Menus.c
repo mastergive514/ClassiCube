@@ -615,6 +615,8 @@ static void ClassicPauseScreen_Init(void* screen) {
 	if (Server.IsSinglePlayer) return;
 	s->btns[1].flags = WIDGET_FLAG_DISABLED;
 	s->btns[3].flags = WIDGET_FLAG_DISABLED;
+
+	if (Game_PureClassic) s->btns[2].flags = WIDGET_FLAG_DISABLED;
 }
 
 static const struct ScreenVTABLE ClassicPauseScreen_VTABLE = {
@@ -1454,13 +1456,13 @@ static int SaveLevelScreen_TextChanged(void* screen, const cc_string* str) {
 static int SaveLevelScreen_KeyDown(void* screen, int key, struct InputDevice* device) {
 	struct SaveLevelScreen* s = (struct SaveLevelScreen*)screen;
 	int handled;
-	SaveLevelScreen_RemoveOverwrites(s);
 	
 	handled = Menu_DoInputDown(s, key, device);
 	/* Pressing Enter triggers save */
 	if (!handled && InputDevice_IsEnter(key, device))
 		SaveLevelScreen_Save(s, &s->save);
 
+	if (key != CCMOUSE_L) SaveLevelScreen_RemoveOverwrites(s);
 	return Screen_InputDown(s, key, device);
 }
 
@@ -1539,7 +1541,7 @@ void SaveLevelScreen_Show(void) {
 	s->VTABLE = &SaveLevelScreen_VTABLE;
 
 	Gui_Add((struct Screen*)s, GUI_PRIORITY_MENU);
-	TextInputWidget_OpenKeyboard(&s->input);
+	TextInputWidget_OpenKeyboard(&s->input, NULL);
 }
 
 
@@ -1971,14 +1973,14 @@ static void KeyBindsScreen_Update(struct KeyBindsScreen* s, int i) {
 	s->dirty = true;
 }
 
-static void KeyBindsScreen_TriggerBinding(int key, struct InputDevice* device) {
+static cc_bool KeyBindsScreen_TriggerBinding(int key, struct InputDevice* device) {
 	struct KeyBindsScreen* s = &KeyBindsScreen;
 	InputBind bind;
 	int idx;
-	if (device->type != bind_device->type) return;
+	if (device->type != bind_device->type) return false;
 	
 	Input.DownHook = NULL;
-	if (s->curI == -1) return;
+	if (s->curI == -1) return false;
 	bind = s->binds[s->curI];
 	
 	if (key == device->escapeButton) {
@@ -1991,6 +1993,7 @@ static void KeyBindsScreen_TriggerBinding(int key, struct InputDevice* device) {
 	s->curI     = -1;
 	s->closable = true;
 	KeyBindsScreen_Update(s, idx);
+	return true;
 }
 
 static void KeyBindsScreen_OnBindingClick(void* screen, void* widget) {
@@ -2246,7 +2249,9 @@ static struct Widget* menuInput_widgets[2 + 1];
 void MenuInputOverlay_Close(cc_bool valid) {
 	struct MenuInputOverlay* s = (struct MenuInputOverlay*)&MenuInputOverlay;
 	Gui_Remove((struct Screen*)s);
-	s->onDone(&s->input.base.text, valid);
+	
+	if (s->onDone) s->onDone(&s->input.base.text, valid);
+	s->onDone = NULL;
 }
 
 static void MenuInputOverlay_EnterInput(struct MenuInputOverlay* s) {

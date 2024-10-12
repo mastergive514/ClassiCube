@@ -68,7 +68,8 @@ void Gfx_OnWindowResize(void) {
 }
 
 void Gfx_SetViewport(int x, int y, int w, int h) {
-	int x2 = x + w - 1, y2 = y + h - 1;
+	int x2 = x + w - 1;
+	int y2 = y + h - 1;
 	GFX_VIEWPORT = x | (y << 8) | (x2 << 16) | (y2 << 24);
 }
 
@@ -98,6 +99,8 @@ void Gfx_EndFrame(void) {
 /*########################################################################################################################*
 *---------------------------------------------------------Textures--------------------------------------------------------*
 *#########################################################################################################################*/
+static int tex_width, tex_height;
+
 static GfxResourceID Gfx_AllocTexture(struct Bitmap* bmp, int rowWidth, cc_uint8 flags, cc_bool mipmaps) {
     vramSetBankA(VRAM_A_TEXTURE);
 
@@ -130,7 +133,12 @@ static GfxResourceID Gfx_AllocTexture(struct Bitmap* bmp, int rowWidth, cc_uint8
 }
 
 void Gfx_BindTexture(GfxResourceID texId) {
-    glBindTexture(0, (int)texId);	
+    glBindTexture(0, (int)texId);
+
+	tex_width  = 0;
+	tex_height = 0;
+	glGetInt(GL_GET_TEXTURE_WIDTH,  &tex_width);
+	glGetInt(GL_GET_TEXTURE_HEIGHT, &tex_height);
 }
 
 void Gfx_UpdateTexture(GfxResourceID texId, int x, int y, struct Bitmap* part, int rowWidth, cc_bool mipmaps) {
@@ -394,22 +402,24 @@ static int matrix_modes[] = { GL_PROJECTION, GL_MODELVIEW, GL_TEXTURE };
 static int lastMatrix;
 
 void Gfx_LoadMatrix(MatrixType type, const struct Matrix* matrix) {
-	if (type != lastMatrix) { lastMatrix = type; glMatrixMode(matrix_modes[type]); }
+	if (type != lastMatrix) { 
+		lastMatrix     = type; 
+		MATRIX_CONTROL = matrix_modes[type]; 
+	}
 	
+	// loads 4x4 identity matrix
 	if (matrix == &Matrix_Identity) {
-		glLoadIdentity();
+		MATRIX_IDENTITY = 0;
 		return;
 		// TODO still scale?
 	}
 
-	m4x4 m;
+	// loads 4x4 matrix from memory
 	const float* src = (const float*)matrix;
-	
 	for (int i = 0; i < 4 * 4; i++)
 	{
-		m.m[i] = floattof32(src[i]);
+		MATRIX_LOAD4x4 = floattof32(src[i]);
 	}
-	glLoadMatrix4x4(&m);
 
     // Vertex commands are signed 16 bit values, with 12 bits fractional
     //  aka only from -8.0 to 8.0
@@ -459,7 +469,7 @@ void Gfx_DrawVb_Lines(int verticesCount) {
 
 
 static void Draw_ColouredTriangles(int verticesCount, int startVertex) {
-	glBegin(GL_QUADS);
+	GFX_BEGIN = GL_QUADS;
 	for (int i = 0; i < verticesCount; i++) 
 	{
 		struct DSColouredVertex* v = (struct DSColouredVertex*)gfx_vertices + startVertex + i;
@@ -468,14 +478,12 @@ static void Draw_ColouredTriangles(int verticesCount, int startVertex) {
 		GFX_VERTEX16 = v->xy;
         GFX_VERTEX16 = v->z;
 	}
-	glEnd();
+	GFX_END = 0;
 }
 
 static void Draw_TexturedTriangles(int verticesCount, int startVertex) {
-	glBegin(GL_QUADS);
-	int width = 0, height = 0;
-	glGetInt(GL_GET_TEXTURE_WIDTH,  &width);
-	glGetInt(GL_GET_TEXTURE_HEIGHT, &height);
+	GFX_BEGIN = GL_QUADS;
+	int width = tex_width, height = tex_height;
 
 	// Original code used was
 	//   U = mulf32(v->u, inttof32(width))
@@ -496,7 +504,7 @@ static void Draw_TexturedTriangles(int verticesCount, int startVertex) {
 		GFX_VERTEX16  = v->xy;
 		GFX_VERTEX16  = v->z;
 	}
-	glEnd();
+	GFX_END = 0;
 }
 
 void Gfx_DrawVb_IndexedTris_Range(int verticesCount, int startVertex) {

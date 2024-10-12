@@ -1,11 +1,7 @@
-#include <stdbool.h>
 #include <string.h>
-#include <stdio.h>
 #include <kos.h>
 #include <dc/pvr.h>
 #include "gldc.h"
-
-GLboolean STATE_DIRTY;
 
 GLboolean DEPTH_TEST_ENABLED;
 GLboolean DEPTH_MASK_ENABLED;
@@ -23,45 +19,6 @@ GLboolean BLEND_ENABLED;
 GLboolean TEXTURES_ENABLED;
 GLboolean AUTOSORT_ENABLED;
 
-AlignedVector OP_LIST;
-AlignedVector PT_LIST;
-AlignedVector TR_LIST;
-
-void glKosInit() {
-    _glInitTextures();
-
-    OP_LIST.list_type = PVR_LIST_OP_POLY;
-    PT_LIST.list_type = PVR_LIST_PT_POLY;
-    TR_LIST.list_type = PVR_LIST_TR_POLY;
-
-    aligned_vector_reserve(&OP_LIST, 1024 * 3);
-    aligned_vector_reserve(&PT_LIST,  512 * 3);
-    aligned_vector_reserve(&TR_LIST, 1024 * 3);
-}
-
-void glKosSwapBuffers() {
-        if (OP_LIST.size > 2) {
-            pvr_list_begin(PVR_LIST_OP_POLY);
-            SceneListSubmit((Vertex*)OP_LIST.data, OP_LIST.size, 0);
-            pvr_list_finish();
-    		OP_LIST.size = 0;
-        }
-
-        if (PT_LIST.size > 2) {
-            pvr_list_begin(PVR_LIST_PT_POLY);
-            SceneListSubmit((Vertex*)PT_LIST.data, PT_LIST.size, 1);
-            pvr_list_finish();
-    		PT_LIST.size = 0;
-        }
-
-        if (TR_LIST.size > 2) {
-            pvr_list_begin(PVR_LIST_TR_POLY);
-            SceneListSubmit((Vertex*)TR_LIST.data, TR_LIST.size, 2);
-            pvr_list_finish();
-    		TR_LIST.size = 0;
-        }
-}
-
 static inline int DimensionFlag(int w) {
     switch(w) {
         case 16: return 1;
@@ -77,6 +34,7 @@ static inline int DimensionFlag(int w) {
     }
 }
 
+#define DEFAULT_MIPMAP_BIAS 4
 void apply_poly_header(pvr_poly_hdr_t* dst, int list_type) {
     TextureObject* tx1 = TEXTURE_ACTIVE;
 
@@ -97,8 +55,6 @@ void apply_poly_header(pvr_poly_hdr_t* dst, int list_type) {
         blend_dst  = PVR_BLEND_ZERO;
     } else if (list_type == PVR_LIST_PT_POLY) {
         /* Punch-through polys require fixed blending and depth modes */
-        blend_src  = PVR_BLEND_SRCALPHA;
-        blend_dst  = PVR_BLEND_INVSRCALPHA;
         depth_comp = PVR_DEPTHCMP_LEQUAL;
     } else if (list_type == PVR_LIST_TR_POLY && AUTOSORT_ENABLED) {
         /* Autosort mode requires this mode for transparent polys */
@@ -106,7 +62,7 @@ void apply_poly_header(pvr_poly_hdr_t* dst, int list_type) {
     }
 
     int txr_enable, txr_alpha;
-    if (!TEXTURES_ENABLED || !tx1 || !tx1->data) {
+    if (!TEXTURES_ENABLED || !tx1) {
         /* Disable all texturing to start with */
         txr_enable = PVR_TEXTURE_DISABLE;
     } else {
@@ -132,20 +88,17 @@ void apply_poly_header(pvr_poly_hdr_t* dst, int list_type) {
     dst->mode1 |= (depth_write << PVR_TA_PM1_DEPTHWRITE_SHIFT) & PVR_TA_PM1_DEPTHWRITE_MASK;
     dst->mode1 |= (txr_enable  << PVR_TA_PM1_TXRENABLE_SHIFT)  & PVR_TA_PM1_TXRENABLE_MASK;
 
-    dst->mode2  = (blend_src       << PVR_TA_PM2_SRCBLEND_SHIFT) & PVR_TA_PM2_SRCBLEND_MASK;
-    dst->mode2 |= (blend_dst       << PVR_TA_PM2_DSTBLEND_SHIFT) & PVR_TA_PM2_DSTBLEND_MASK;
-    dst->mode2 |= (gen_fog_type    << PVR_TA_PM2_FOG_SHIFT)      & PVR_TA_PM2_FOG_MASK;
-    dst->mode2 |= (gen_alpha       << PVR_TA_PM2_ALPHA_SHIFT)    & PVR_TA_PM2_ALPHA_MASK;
+    dst->mode2  = (blend_src    << PVR_TA_PM2_SRCBLEND_SHIFT) & PVR_TA_PM2_SRCBLEND_MASK;
+    dst->mode2 |= (blend_dst    << PVR_TA_PM2_DSTBLEND_SHIFT) & PVR_TA_PM2_DSTBLEND_MASK;
+    dst->mode2 |= (gen_fog_type << PVR_TA_PM2_FOG_SHIFT)      & PVR_TA_PM2_FOG_MASK;
+    dst->mode2 |= (gen_alpha    << PVR_TA_PM2_ALPHA_SHIFT)    & PVR_TA_PM2_ALPHA_MASK;
 
     if (txr_enable == PVR_TEXTURE_DISABLE) {
         dst->mode3 = 0;
     } else {
-        GLuint filter = PVR_FILTER_NEAREST;
-        if (tx1->minFilter == GL_LINEAR && tx1->magFilter == GL_LINEAR) filter = PVR_FILTER_BILINEAR;
-
         dst->mode2 |= (txr_alpha                << PVR_TA_PM2_TXRALPHA_SHIFT) & PVR_TA_PM2_TXRALPHA_MASK;
-        dst->mode2 |= (filter                   << PVR_TA_PM2_FILTER_SHIFT)   & PVR_TA_PM2_FILTER_MASK;
-        dst->mode2 |= (tx1->mipmap_bias         << PVR_TA_PM2_MIPBIAS_SHIFT)  & PVR_TA_PM2_MIPBIAS_MASK;
+        dst->mode2 |= (PVR_FILTER_NEAREST       << PVR_TA_PM2_FILTER_SHIFT)   & PVR_TA_PM2_FILTER_MASK;
+        dst->mode2 |= (DEFAULT_MIPMAP_BIAS      << PVR_TA_PM2_MIPBIAS_SHIFT)  & PVR_TA_PM2_MIPBIAS_MASK;
         dst->mode2 |= (PVR_TXRENV_MODULATEALPHA << PVR_TA_PM2_TXRENV_SHIFT)   & PVR_TA_PM2_TXRENV_MASK;
 
         dst->mode2 |= (DimensionFlag(tx1->width)  << PVR_TA_PM2_USIZE_SHIFT) & PVR_TA_PM2_USIZE_MASK;

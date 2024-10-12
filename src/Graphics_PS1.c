@@ -28,20 +28,22 @@ typedef struct {
 	DISPENV disp_env;
 	DRAWENV draw_env;
 
-	cc_uint32 ot[OT_LENGTH];
-	cc_uint8  buffer[BUFFER_LENGTH];
+	uint32_t ot[OT_LENGTH];
+	uint8_t  buffer[BUFFER_LENGTH];
 } RenderBuffer;
 
 static RenderBuffer buffers[2];
-static cc_uint8*    next_packet;
+static uint8_t*     next_packet;
+static uint8_t*     next_packet_end;
 static int          active_buffer;
 static RenderBuffer* buffer;
 static void* lastPoly;
-static cc_bool cullingEnabled;
+static cc_bool cullingEnabled, noMemWarned;
 
 static void OnBufferUpdated(void) {
-	buffer      = &buffers[active_buffer];
-	next_packet = buffer->buffer;
+	buffer          = &buffers[active_buffer];
+	next_packet     = buffer->buffer;
+    next_packet_end = next_packet + BUFFER_LENGTH;
 	ClearOTagR(buffer->ot, OT_LENGTH);
 }
 
@@ -60,14 +62,22 @@ static void SetupContexts(int w, int h, int r, int g, int b) {
 	OnBufferUpdated();
 }
 
-static void* new_primitive(int size) {
-	RenderBuffer* buffer = &buffers[active_buffer];
-	uint8_t* prim        = next_packet;
+// NOINLINE to avoid polluting the hot path
+static CC_NOINLINE new_primitive_nomem(void) {
+	if (noMemWarned) return NULL;
+	noMemWarned = true;
+	
+	Platform_LogConst("OUT OF VERTEX RAM");
+	return NULL;
+}
 
+static void* new_primitive(int size) {
+	uint8_t* prim  = next_packet;
 	next_packet += size;
 
-	assert(next_packet <= &buffer->buffer[BUFFER_LENGTH]);
-	return (void*)prim;
+	if (next_packet <= next_packet_end);
+		return (void*)prim;
+	return new_primitive_nomem();
 }
 
 static GfxResourceID white_square;
@@ -363,8 +373,8 @@ void Gfx_DeleteIb(GfxResourceID* ib) { }
 *-------------------------------------------------------Vertex buffers----------------------------------------------------*
 *#########################################################################################################################*/
 // Preprocess vertex buffers into optimised layout for PS1
-struct PS1VertexColoured { int x, y, z; PackedCol Col; };
-struct PS1VertexTextured { int x, y, z; PackedCol Col; int u, v; };
+struct PS1VertexColoured { int x, y, z; unsigned rgbc; };
+struct PS1VertexTextured { int x, y, z; unsigned rgbc; int u, v; };
 static VertexFormat buf_fmt;
 static int buf_count;
 
@@ -374,9 +384,41 @@ static void* gfx_vertices;
 #define XYZFixed(value) ((int)((value) * (1 << 6)))
 #define UVFixed(value)  ((int)((value) * 1024.0f) & 0x3FF) // U/V wrapping not supported
 
+
+#define POLY_CODE_F4  0x28
+#define POLY_LEN_F4      5
+struct CC_POLY_F4 {
+	uint32_t tag;
+	uint32_t rgbc; // r0, g0, b0, code;
+	int16_t	 x0, y0;
+	int16_t	 x1, y1;
+	int16_t	 x2, y2;
+	int16_t	 x3, y3;
+};
+
+#define POLY_CODE_FT4 0x2C
+#define POLY_LEN_FT4     9
+struct CC_POLY_FT4 {
+	uint32_t tag;
+	uint32_t rgbc; // r0, g0, b0, code;
+	uint16_t x0, y0;
+	uint8_t	 u0, v0;
+	uint16_t clut;
+	int16_t  x1, y1;
+	uint8_t	 u1, v1;
+	uint16_t tpage;
+	int16_t	 x2, y2;
+	uint8_t	 u2, v2;
+	uint16_t pad0;
+	int16_t	 x3, y3;
+	uint8_t	 u3, v3;
+	uint16_t pad1;
+};
+
 static void PreprocessTexturedVertices(void) {
 	struct PS1VertexTextured* dst = gfx_vertices;
 	struct VertexTextured* src    = gfx_vertices;
+	float u, v;
 
 	// PS1 need to use raw U/V coordinates
 	//   i.e. U = (src->U * tex->width) % tex->width
@@ -392,8 +434,19 @@ static void PreprocessTexturedVertices(void) {
 		dst->x = XYZFixed(src->x);
 		dst->y = XYZFixed(src->y);
 		dst->z = XYZFixed(src->z);
-		dst->u = UVFixed(src->U * 0.99f);
-		dst->v = UVFixed(src->V        );
+
+		u = src->U * 0.99f;
+		v = src->V == 1.0f ? 0.99f : src->V;
+
+		dst->u = UVFixed(u);
+		dst->v = UVFixed(v);
+
+		// https://problemkaputt.de/psxspx-gpu-rendering-attributes.htm
+		// "For untextured graphics, 8bit RGB values of FFh are brightest. However, for texture blending, 8bit values of 80h are brightest"
+		int R = PackedCol_R(src->Col) >> 1;
+		int G = PackedCol_G(src->Col) >> 1;
+		int B = PackedCol_B(src->Col) >> 1;
+		dst->rgbc = R | (G << 8) | (B << 16) | (POLY_CODE_FT4 << 24);
 	}
 }
 
@@ -406,6 +459,11 @@ static void PreprocessColouredVertices(void) {
 		dst->x = XYZFixed(src->x);
 		dst->y = XYZFixed(src->y);
 		dst->z = XYZFixed(src->z);
+
+		int R = PackedCol_R(src->Col);
+		int G = PackedCol_G(src->Col);
+		int B = PackedCol_B(src->Col);
+		dst->rgbc = R | (G << 8) | (B << 16) | (POLY_CODE_F4 << 24);
 	}
 }
 
@@ -468,9 +526,9 @@ static void LoadTransformMatrix(struct Matrix* src) {
 	// https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
 	MATRIX mtx;
 
-	mtx.t[0] = ToFixed(src->row4.x);
-	mtx.t[1] = ToFixed(src->row4.y);
-	mtx.t[2] = ToFixed(src->row4.z);
+	mtx.t[0] = (int)(src->row4.x);
+	mtx.t[1] = (int)(src->row4.y);
+	mtx.t[2] = (int)(src->row4.z);
 	
 	mvp_trans.x = XYZFixed(1) * ToFixed(src->row4.x);
 	mvp_trans.y = XYZFixed(1) * ToFixed(src->row4.y);
@@ -606,17 +664,16 @@ static void DrawColouredQuads2D(int verticesCount, int startVertex) {
 	{
 		struct PS1VertexColoured* v = (struct PS1VertexColoured*)gfx_vertices + startVertex + i;
 		
-		POLY_F4* poly = new_primitive(sizeof(POLY_F4));
-		setPolyF4(poly);
+		struct CC_POLY_FT4* poly = new_primitive(sizeof(struct CC_POLY_FT4));
+        if (!poly) return;
+
+		setlen(poly, POLY_LEN_F4);
+		poly->rgbc = v->rgbc;
 
 		poly->x0 = XYZInteger(v[1].x); poly->y0 = XYZInteger(v[1].y);
 		poly->x1 = XYZInteger(v[0].x); poly->y1 = XYZInteger(v[0].y);
 		poly->x2 = XYZInteger(v[2].x); poly->y2 = XYZInteger(v[2].y);
 		poly->x3 = XYZInteger(v[3].x); poly->y3 = XYZInteger(v[3].y);
-
-		poly->r0 = PackedCol_R(v->Col);
-		poly->g0 = PackedCol_G(v->Col);
-		poly->b0 = PackedCol_B(v->Col);
 
 		if (lastPoly) { 
 			setaddr(poly, getaddr(lastPoly)); setaddr(lastPoly, poly); 
@@ -636,8 +693,11 @@ static void DrawTexturedQuads2D(int verticesCount, int startVertex) {
 	{
 		struct PS1VertexTextured* v = (struct PS1VertexTextured*)gfx_vertices + startVertex + i;
 		
-		POLY_FT4* poly = new_primitive(sizeof(POLY_FT4));
-		setPolyFT4(poly);
+		struct CC_POLY_FT4* poly = new_primitive(sizeof(struct CC_POLY_FT4));
+        if (!poly) return;
+
+		setlen(poly, POLY_LEN_FT4);
+		poly->rgbc  = v->rgbc;
 		poly->tpage = curTex->tpage;
 		poly->clut  = 0;
 
@@ -655,12 +715,6 @@ static void DrawTexturedQuads2D(int verticesCount, int startVertex) {
 		poly->u3 = (v[3].u >> uShift) + uOffset;
 		poly->v3 = (v[3].v >> vShift) + vOffset;
 
-		// https://problemkaputt.de/psxspx-gpu-rendering-attributes.htm
-		// "For untextured graphics, 8bit RGB values of FFh are brightest. However, for texture blending, 8bit values of 80h are brightest"
-		poly->r0 = PackedCol_R(v->Col) >> 1;
-		poly->g0 = PackedCol_G(v->Col) >> 1;
-		poly->b0 = PackedCol_B(v->Col) >> 1;
-
 		if (lastPoly) { 
 			setaddr(poly, getaddr(lastPoly)); setaddr(lastPoly, poly); 
 		} else {
@@ -673,10 +727,7 @@ static void DrawTexturedQuads2D(int verticesCount, int startVertex) {
 static void DrawColouredQuads3D(int verticesCount, int startVertex) {
 	for (int i = 0; i < verticesCount; i += 4) 
 	{
-		struct VertexColoured* v = (struct VertexColoured*)gfx_vertices + startVertex + i;
-		
-		POLY_F4* poly = new_primitive(sizeof(POLY_F4));
-		setPolyF4(poly);
+		struct PS1VertexColoured* v = (struct PS1VertexColoured*)gfx_vertices + startVertex + i;
 
 		IVec3 coords[4];
 		int clipped = 0;
@@ -685,6 +736,12 @@ static void DrawColouredQuads3D(int verticesCount, int startVertex) {
 		clipped |= Transform(&coords[2], &v[2]);
 		clipped |= Transform(&coords[3], &v[3]);
 		if (clipped) continue;
+		
+		struct CC_POLY_F4* poly = new_primitive(sizeof(struct CC_POLY_F4));
+        if (!poly) return;
+
+		setlen(poly, POLY_LEN_F4);
+		poly->rgbc = v->rgbc;
 
 		poly->x0 = coords[1].x; poly->y0 = coords[1].y;
 		poly->x1 = coords[0].x; poly->y1 = coords[0].y;
@@ -693,10 +750,6 @@ static void DrawColouredQuads3D(int verticesCount, int startVertex) {
 
 		int p = (coords[0].z + coords[1].z + coords[2].z + coords[3].z) / 4;
 		if (p < 0 || p >= OT_LENGTH) continue;
-
-		poly->r0 = PackedCol_R(v->Col);
-		poly->g0 = PackedCol_G(v->Col);
-		poly->b0 = PackedCol_B(v->Col);
 
 		addPrim(&buffer->ot[p >> 2], poly);
 	}
@@ -710,11 +763,6 @@ static void DrawTexturedQuads3D(int verticesCount, int startVertex) {
 	for (int i = 0; i < verticesCount; i += 4) 
 	{
 		struct PS1VertexTextured* v = (struct PS1VertexTextured*)gfx_vertices + startVertex + i;
-		
-		POLY_FT4* poly = new_primitive(sizeof(POLY_FT4));
-		setPolyFT4(poly);
-		poly->tpage = curTex->tpage;
-		poly->clut  = 0;
 
 		IVec3 coords[4];
 		int clipped = 0;
@@ -723,6 +771,14 @@ static void DrawTexturedQuads3D(int verticesCount, int startVertex) {
 		clipped |= Transform(&coords[2], &v[2]);
 		clipped |= Transform(&coords[3], &v[3]);
 		if (clipped) continue;
+		
+		struct CC_POLY_FT4* poly = new_primitive(sizeof(struct CC_POLY_FT4));
+        if (!poly) return;
+
+		setlen(poly, POLY_LEN_FT4);
+		poly->rgbc  = v->rgbc;
+		poly->tpage = curTex->tpage;
+		poly->clut  = 0;
 
 		// TODO & instead of % 
 		poly->x0 = coords[1].x; poly->y0 = coords[1].y;
@@ -749,10 +805,6 @@ static void DrawTexturedQuads3D(int verticesCount, int startVertex) {
 		int p = (coords[0].z + coords[1].z + coords[2].z + coords[3].z) / 4;
 		if (p < 0 || p >= OT_LENGTH) continue;
 
-		poly->r0 = PackedCol_R(v->Col) >> 1;
-		poly->g0 = PackedCol_G(v->Col) >> 1;
-		poly->b0 = PackedCol_B(v->Col) >> 1;
-
 		addPrim(&buffer->ot[p >> 2], poly);
 	}
 }
@@ -763,6 +815,7 @@ static void DrawTexturedQuads3D(int verticesCount, int startVertex) {
 		struct VertexTextured* v = (struct VertexTextured*)gfx_vertices + startVertex + i;
 		
 		POLY_F4* poly = new_primitive(sizeof(POLY_F4));
+        if (!poly) return;
 		setPolyF4(poly);
 
 		SVECTOR coords[4];
@@ -809,6 +862,7 @@ static void DrawTexturedQuads3D(int verticesCount, int startVertex) {
 		struct VertexTextured* v = (struct VertexTextured*)gfx_vertices + startVertex + i;
 		
 		POLY_F4* poly = new_primitive(sizeof(POLY_F4));
+        if (!poly) return;
 		setPolyF4(poly);
 
 		poly->x0 = v[1].x; poly->y0 = v[1].y;
@@ -862,7 +916,8 @@ cc_bool Gfx_WarnIfNecessary(void) { return false; }
 cc_bool Gfx_GetUIOptions(struct MenuOptionsScreen* s) { return false; }
 
 void Gfx_BeginFrame(void) {
-	lastPoly = NULL;
+	lastPoly    = NULL;
+	noMemWarned = false;
 }
 
 void Gfx_EndFrame(void) {

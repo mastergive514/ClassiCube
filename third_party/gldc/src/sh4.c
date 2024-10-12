@@ -2,16 +2,26 @@
 #include <kos.h>
 #include <dc/pvr.h>
 #include "gldc.h"
-#include "sh4_math.h"
 
 #define PREFETCH(addr) __builtin_prefetch((addr))
 static volatile uint32_t* sq;
+#define GL_FORCE_INLINE __attribute__((always_inline)) inline
 
-GL_FORCE_INLINE float _glFastInvert(float x) {
-    return MATH_fsrra(x * x);
+// calculates 1/sqrt(x)
+static GL_FORCE_INLINE float sh4_fsrra(float x) {
+  asm volatile ("fsrra %[value]\n"
+  : [value] "+f" (x) // outputs (r/w to FPU register)
+  : // no inputs
+  : // no clobbers
+  );
+  return x;
 }
 
-GL_FORCE_INLINE void _glPerspectiveDivideVertex(Vertex* vertex) {
+static GL_FORCE_INLINE float _glFastInvert(float x) {
+    return sh4_fsrra(x * x);
+}
+
+static GL_FORCE_INLINE void _glPerspectiveDivideVertex(Vertex* vertex) {
     const float f = _glFastInvert(vertex->w);
 
     /* Convert to NDC (viewport already applied) */
@@ -35,10 +45,6 @@ static inline void _glPushHeaderOrVertex(Vertex* v)  {
 }
 
 extern void ClipEdge(const Vertex* const v1, const Vertex* const v2, Vertex* vout);
-
-#define SPAN_SORT_CFG 0x005F8030
-static volatile uint32_t* PVR_LMMODE0 = (uint32_t*) 0xA05F6884;
-static volatile uint32_t* PVR_LMMODE1 = (uint32_t*) 0xA05F6888;
 
 #define V0_VIS (1 << 0)
 #define V1_VIS (1 << 1)
@@ -365,16 +371,9 @@ static void SubmitClipped(Vertex* v0, Vertex* v1, Vertex* v2, Vertex* v3, uint8_
 }
 
 extern void ProcessVertexList(Vertex* v3, int n, void* sq_addr);
-void SceneListSubmit(Vertex* v3, int n, int type) {
-    PVR_SET(SPAN_SORT_CFG, 0x0);
 
-    //Set PVR DMA registers
-    *PVR_LMMODE0 = 0;
-    *PVR_LMMODE1 = 0;
-
-	sq_lock((void*)PVR_TA_INPUT);
+void SceneListSubmit(Vertex* v3, int n) {
 	sq = (uint32_t*)MEM_AREA_SQ_BASE;
-	uint8_t visible_mask = 0;
 
     for(int i = 0; i < n; ++i, ++v3) 
 	{
@@ -394,8 +393,7 @@ void SceneListSubmit(Vertex* v3, int n, int type) {
         Vertex* const v1 = v3 - 2;
         Vertex* const v2 = v3 - 1;
 
-        visible_mask = v3->flags & 0xFF;
-        v3->flags &= ~0xFF;
+        uint8_t visible_mask = v3->flags & 0xFF;
         
         // Stats gathering found that when testing a 64x64x64 sized world, at most
         //   ~400-500 triangles needed clipping
@@ -429,7 +427,4 @@ void SceneListSubmit(Vertex* v3, int n, int type) {
             break;
         }
     }
-
-	sq_wait();
-	sq_unlock();
 }

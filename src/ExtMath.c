@@ -9,12 +9,22 @@ static const cc_uint64 _DBL_NAN = 0x7FF8000000000000ULL;
 #define DBL_NAN  *((double*)&_DBL_NAN)
 static const cc_uint64 _POS_INF = 0x7FF0000000000000ULL;
 #define POS_INF *((double*)&_POS_INF)
-static const cc_uint64 _NEG_INF = 0xFFF0000000000000ULL;
-#define NEG_INF *((double*)&_NEG_INF)
+
+/* Sega 32x is missing these intrinsics */
+#if defined CC_BUILD_32X
+#include <stdint.h>
+extern int32_t fix16_sqrt(int32_t value);
+
+float sqrtf(float x) {
+                int32_t fp_x = (int32_t)(x * (1 << 16));
+                fp_x = fix16_sqrt(fp_x);
+                return (float)fp_x / (1 << 16);
+        }
+#endif
 
 
 /* Sega saturn is missing these intrinsics */
-#ifdef CC_BUILD_SATURN
+#if defined CC_BUILD_SATURN
 #include <stdint.h>
 extern int32_t fix16_sqrt(int32_t value);
 static int abs(int x) { return x < 0 ? -x : x; }
@@ -39,6 +49,14 @@ float sqrtf(float x) {
 	}
 #elif defined __GNUC__
 	/* Defined in .h using builtins */
+#elif defined __TINYC__
+	/* Older versions of TinyC don't support fabsf or sqrtf */
+	/* Those can be used though if compiling with newer TinyC */
+	/*  versions for a very small performance improvement */
+	#include <math.h>
+
+	float Math_AbsF(float x)  { return fabs(x); }
+	float Math_SqrtF(float x) { return sqrt(x); }
 #else
 	#include <math.h>
 
@@ -162,7 +180,7 @@ float Random_Float(RNGState* seed) {
 
 float Math_SinF(float x)   { return sinf(x); }
 float Math_CosF(float x)   { return cosf(x); }
-#elif defined CC_BUILD_PS1 || defined CC_BUILD_SATURN || defined CC_BUILD_NDS
+#elif defined CC_BUILD_PS1 || defined CC_BUILD_SATURN || defined CC_BUILD_NDS || defined CC_BUILD_32X
 
 // Source https://www.coranac.com/2009/07/sines
 #define ISIN_QN	10
@@ -416,18 +434,16 @@ double Math_Exp2(double x) {
 
 	if (x == POS_INF || x == DBL_NAN)
 		return x;
-	if (x == NEG_INF)
-		return 0.0;
 
-	x_int = (int) x;
+	x_int = (int)x;
 
-	if (x < 0)
-		x_int--;
-
-	if (x_int < -1022)
+	if (x_int <= -1022)
 		return 0.0;
 	if (x_int > 1023)
 		return POS_INF;
+
+	if (x < 0)
+		x_int--;
 
 	doi.i = x_int + 1023;
 	doi.i <<= 52;

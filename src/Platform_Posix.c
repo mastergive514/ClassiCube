@@ -1089,15 +1089,15 @@ cc_bool Updater_Clean(void) { return true; }
 	#endif
 #elif defined CC_BUILD_FREEBSD
 	#if __x86_64__
-	const struct UpdaterInfo Updater_Info = { "", 1, { { "OpenGL", "cc-fbsd64-gl1" } } };
+	const struct UpdaterInfo Updater_Info = { "", 1, { { "OpenGL", "cc-freebsd-64" } } };
 	#elif __i386__
-	const struct UpdaterInfo Updater_Info = { "", 1, { { "OpenGL", "cc-fbsd32-gl1" } } };
+	const struct UpdaterInfo Updater_Info = { "", 1, { { "OpenGL", "cc-freebsd-32" } } };
 	#else
 	const struct UpdaterInfo Updater_Info = { "&eCompile latest source code to update", 0 };
 	#endif
 #elif defined CC_BUILD_NETBSD
 	#if __x86_64__
-	const struct UpdaterInfo Updater_Info = { "", 1, { { "OpenGL", "cc-netbsd64-gl1" } } };
+	const struct UpdaterInfo Updater_Info = { "", 1, { { "OpenGL", "cc-netbsd-64" } } };
 	#else
 	const struct UpdaterInfo Updater_Info = { "&eCompile latest source code to update", 0 };
 	#endif
@@ -1527,6 +1527,10 @@ cc_result Platform_Decrypt(const void* data, int len, cc_string* dst) {
 		String_AppendAll(dst, header, min(dataLen, ENC_SIZE));
 	}
 	return 0;
+}
+
+cc_result Platform_GetEntropy(void* data, int len) {
+	return ERR_NOT_SUPPORTED;
 }
 
 

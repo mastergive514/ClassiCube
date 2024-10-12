@@ -1,5 +1,6 @@
 #include "Core.h"
 #if CC_WIN_BACKEND == CC_WIN_BACKEND_SDL3
+#undef CC_BUILD_EGL /* eglCreateWindowSurface can't use an SDL window */
 #include "_WindowBase.h"
 #include "Graphics.h"
 #include "String.h"
@@ -68,7 +69,7 @@ static void DoCreateWindow(int width, int height, int flags) {
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,  width);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, height);
-	SDL_SetNumberProperty(props, "flags", flags | SDL_WINDOW_RESIZABLE);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, flags | SDL_WINDOW_RESIZABLE);
 
 	win_handle = SDL_CreateWindowWithProperties(props);
 	if (!win_handle) Window_SDLFail("creating window");
@@ -222,13 +223,13 @@ static int MapNativeKey(SDL_Keycode k) {
 }
 
 static void OnKeyEvent(const SDL_Event* e) {
-	cc_bool pressed = e->key.state == SDL_PRESSED;
+	cc_bool pressed = e->key.down == true;
 	int key = MapNativeKey(e->key.key);
 	if (key) Input_Set(key, pressed);
 }
 
 static void OnMouseEvent(const SDL_Event* e) {
-	cc_bool pressed = e->button.state == SDL_PRESSED;
+	cc_bool pressed = e->button.down == true;
 	int btn;
 	switch (e->button.button) {
 		case SDL_BUTTON_LEFT:   btn = CCMOUSE_L; break;
@@ -242,12 +243,12 @@ static void OnMouseEvent(const SDL_Event* e) {
 }
 
 static void OnTextEvent(const SDL_Event* e) {
+	const cc_uint8* src;
 	cc_codepoint cp;
-	const char* src;
 	int i, len;
 
-	src = e->text.text;
-	len = String_Length(src);
+	src = (cc_uint8*)e->text.text;
+	len = String_Length(e->text.text);
 
 	while (len > 0) {
 		i = Convert_Utf8ToCodepoint(&cp, src, len);
@@ -567,7 +568,7 @@ void Gamepads_Process(float delta) {
 /*########################################################################################################################*
 *-----------------------------------------------------OpenGL context------------------------------------------------------*
 *#########################################################################################################################*/
-#if CC_GFX_BACKEND_IS_GL() && !defined CC_BUILD_EGL
+#if CC_GFX_BACKEND_IS_GL()
 static SDL_GLContext win_ctx;
 
 void GLContext_Create(void) {
@@ -583,6 +584,8 @@ void GLContext_Create(void) {
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, true);
 #ifdef CC_BUILD_GLES
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 #endif
 
 	win_ctx = SDL_GL_CreateContext(win_handle);

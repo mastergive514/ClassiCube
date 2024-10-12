@@ -539,6 +539,7 @@ static void Gamepad_Apply(int port, int btn, cc_bool was, int pressed) {
 static void Gamepad_Update(int port, float delta) {
 	struct GamepadDevice* pad = &Gamepad_Devices[port];
 	int btn;
+	if (!pad->deviceID) return;
 
 	for (btn = 0; btn < GAMEPAD_BTN_COUNT; btn++)
 	{
@@ -590,6 +591,16 @@ void Gamepad_Tick(float delta) {
 	}
 }
 
+static CC_NOINLINE void Gamepad_Add(int i, long deviceID, const struct BindMapping_* defaults) {
+	Mem_Copy(&Gamepad_Devices[i].base, &padDevice, sizeof(struct InputDevice));
+	Gamepad_Devices[i].base.rawIndex     = i;
+	Gamepad_Devices[i].base.currentBinds = padBind_Mappings[i];
+	Gamepad_Devices[i].base.defaultBinds = defaults;
+	Gamepad_Devices[i].deviceID          = deviceID;
+
+	InputBind_Load(&Gamepad_Devices[i].base);
+}
+
 int Gamepad_Connect(long deviceID, const struct BindMapping_* defaults) {
 	int i;
 	for (i = 0; i < INPUT_MAX_GAMEPADS; i++)
@@ -597,13 +608,7 @@ int Gamepad_Connect(long deviceID, const struct BindMapping_* defaults) {
 		if (Gamepad_Devices[i].deviceID == deviceID) return i;
 		if (Gamepad_Devices[i].deviceID != 0) continue;
 		
-		Mem_Copy(&Gamepad_Devices[i].base, &padDevice, sizeof(struct InputDevice));
-		Gamepad_Devices[i].base.rawIndex     = i;
-		Gamepad_Devices[i].base.currentBinds = padBind_Mappings[i];
-		Gamepad_Devices[i].base.defaultBinds = defaults;
-		Gamepad_Devices[i].deviceID          = deviceID;
-
-		InputBind_Load(&Gamepad_Devices[i].base);
+		Gamepad_Add(i, deviceID, defaults);
 		return i;
 	}
 

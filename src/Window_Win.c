@@ -1,5 +1,30 @@
 #include "Core.h"
 #if CC_WIN_BACKEND == CC_WIN_BACKEND_WIN32
+/*
+   The Open Toolkit Library License
+  
+   Copyright (c) 2006 - 2009 the Open Toolkit library.
+  
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights to
+   use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+   the Software, and to permit persons to whom the Software is furnished to do
+   so, subject to the following conditions:
+  
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+  
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+   OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+   HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+   OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "_WindowBase.h"
 #include "String.h"
 #include "Funcs.h"
@@ -18,35 +43,20 @@
 
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0501 /* Windows XP */
-/* NOTE: Functions that are not present on Windows 2000 are dynamically loaded. */
-/* Hence the actual minimum supported OS is Windows 2000. This just avoids redeclaring structs. */
+/* NOTE: Functions not present on older OS versions are dynamically loaded. */
+/* Setting WIN32_WINNT to XP just avoids redeclaring structs. */
 #endif
 #include <windows.h>
-#include <commdlg.h>
+/* #include <commdlg.h> */
+/* Compatibility versions so compiling works on older Windows SDKs */
+#include "../misc/windows/min-commdlg.h"
+#include "../misc/windows/min-winuser.h"
 
 /* https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setpixelformat */
 #define CC_WIN_STYLE WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN
 #define CC_WIN_CLASSNAME TEXT("ClassiCube_Window")
 #define Rect_Width(rect)  (rect.right  - rect.left)
 #define Rect_Height(rect) (rect.bottom - rect.top)
-
-#ifndef WM_XBUTTONDOWN
-/* Missing if _WIN32_WINNT isn't defined */
-#define WM_XBUTTONDOWN 0x020B
-#define WM_XBUTTONUP   0x020C
-#endif
-#ifndef WM_INPUT
-/* Missing when compiling with some older winapi SDKs */
-#define WM_INPUT       0x00FF
-#endif
-#ifndef WM_MOUSEHWHEEL
-/* Missing when compiling with some older winapi SDKs */
-#define WM_MOUSEHWHEEL 0x020E
-#endif
-
-static BOOL (WINAPI *_RegisterRawInputDevices)(PCRAWINPUTDEVICE devices, UINT numDevices, UINT size);
-static UINT (WINAPI *_GetRawInputData)(HRAWINPUT hRawInput, UINT cmd, void* data, UINT* size, UINT headerSize);
-static BOOL (WINAPI* _SetProcessDPIAware)(void);
 
 static HINSTANCE win_instance;
 static HDC win_DC;
@@ -307,16 +317,8 @@ void Window_PreInit(void) {
 }
 
 void Window_Init(void) {
-	static const struct DynamicLibSym funcs[] = {
-		DynamicLib_Sym(RegisterRawInputDevices),
-		DynamicLib_Sym(GetRawInputData),
-		DynamicLib_Sym(SetProcessDPIAware)
-	};
-	static const cc_string user32 = String_FromConst("USER32.DLL");
-	void* lib;
 	HDC hdc;
-
-	DynamicLib_LoadAll(&user32, funcs, Array_Elems(funcs), &lib);
+	User32_LoadDynamicFuncs();
 	Input.Sources = INPUT_SOURCE_NORMAL;
 
 	/* Enable high DPI support */
@@ -342,10 +344,11 @@ void Window_Free(void) { }
 
 static ATOM DoRegisterClass(void) {
 	ATOM atom;
-	WNDCLASSEXW wc = { 0 };
-	wc.cbSize     = sizeof(WNDCLASSEXW);
-	wc.style      = CS_OWNDC; /* https://stackoverflow.com/questions/48663815/getdc-releasedc-cs-owndc-with-opengl-and-gdi */
-	wc.hInstance  = win_instance;
+	cc_result res;
+	WNDCLASSEXW wc   = { 0 };
+	wc.cbSize        = sizeof(WNDCLASSEXW);
+	wc.style         = CS_OWNDC; /* https://stackoverflow.com/questions/48663815/getdc-releasedc-cs-owndc-with-opengl-and-gdi */
+	wc.hInstance     = win_instance;
 	wc.lpfnWndProc   = Window_Procedure;
 	wc.lpszClassName = CC_WIN_CLASSNAME;
 
@@ -357,13 +360,24 @@ static ATOM DoRegisterClass(void) {
 
 	if ((atom = RegisterClassExW(&wc))) return atom;
 	/* Windows 9x does not support W API functions */
-	return RegisterClassExA((const WNDCLASSEXA*)&wc);
+	if ((atom = RegisterClassExA((const WNDCLASSEXA*)&wc))) return atom;
+	
+	/* Windows NT 3.5 does not support RegisterClassExA function */
+	res = GetLastError();
+	if (res == ERROR_CALL_NOT_IMPLEMENTED) {
+		if ((atom = RegisterClassA((const WNDCLASSA*)&wc.style))) return atom;
+		res = GetLastError();
+	}
+	
+	Logger_Abort2(res, "Failed to register window class");
+	return NULL;
 }
 
 static HWND CreateWindowHandle(ATOM atom, int width, int height) {
 	cc_result res;
 	HWND hwnd;
 	RECT r;
+	
 	/* Calculate final window rectangle after window decorations are added (titlebar, borders etc) */
 	r.left = Display_CentreX(width);  r.right  = r.left + width;
 	r.top  = Display_CentreY(height); r.bottom = r.top  + height;
@@ -431,8 +445,8 @@ void Clipboard_GetText(cc_string* value) {
 	HWND hwnd = Window_Main.Handle.ptr;
 	cc_bool unicode;
 	HANDLE hGlobal;
-	LPVOID src;
-	SIZE_T size;
+	_SIZE_T size;
+	void* src;
 	int i;
 
 	/* retry up to 50 times */
@@ -843,11 +857,11 @@ static void GLContext_SelectGraphicsMode(struct GraphicsMode* mode) {
 }
 
 void GLContext_Create(void) {
+	static const cc_string glPath = String_FromConst("OPENGL32.dll");
 	struct GraphicsMode mode;
+
 	InitGraphicsMode(&mode);
 	GLContext_SelectGraphicsMode(&mode);
-
-	static const cc_string glPath = String_FromConst("OPENGL32.dll");
 	gl_lib = DynamicLib_Load2(&glPath);
 
 	ctx_handle = wglCreateContext(win_DC);

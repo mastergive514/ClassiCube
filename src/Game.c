@@ -219,7 +219,7 @@ cc_bool Game_CanPick(BlockID block) {
 	return Blocks.Collide[block] != COLLIDE_LIQUID || Game_BreakableLiquids;
 }
 
-cc_bool Game_UpdateTexture(GfxResourceID* texId, struct Stream* src, const cc_string* file, 
+cc_bool Game_UpdateTexture(GfxResourceID* texId, struct Stream* src, const cc_string* file,
 							cc_uint8* skinType, int* heightDivisor) {
 	struct Bitmap bmp;
 	cc_bool success;
@@ -229,7 +229,7 @@ cc_bool Game_UpdateTexture(GfxResourceID* texId, struct Stream* src, const cc_st
 	if (res) { Logger_SysWarn2(res, "decoding", file); }
 	
 	/* E.g. gui.png only need top half of the texture loaded */
-	if (heightDivisor && bmp.height >= *heightDivisor) 
+	if (heightDivisor && bmp.height >= *heightDivisor)
 		bmp.height /= *heightDivisor;
 
 	success = !res && Game_ValidateBitmap(file, &bmp);
@@ -254,7 +254,7 @@ cc_bool Game_ValidateBitmap(const cc_string* file, struct Bitmap* bmp) {
 	if (bmp->width > maxWidth || bmp->height > maxHeight) {
 		Chat_Add1("&cUnable to use %s from the texture pack.", file);
 
-		Chat_Add4("&c Its size is (%i,%i), your GPU supports (%i,%i) at most.", 
+		Chat_Add4("&c Its size is (%i,%i), your GPU supports (%i,%i) at most.",
 				&bmp->width, &bmp->height, &maxWidth, &maxHeight);
 		return false;
 	}
@@ -264,7 +264,7 @@ cc_bool Game_ValidateBitmap(const cc_string* file, struct Bitmap* bmp) {
 		texSize = (bmp->width * bmp->height) / (1024.0f * 1024.0f);
 		maxSize = Gfx.MaxTexSize             / (1024.0f * 1024.0f);
 
-		Chat_Add2("&c Its size is %f3 MB, your GPU supports %f3 MB at most.", 
+		Chat_Add2("&c Its size is %f3 MB, your GPU supports %f3 MB at most.",
 				&texSize, &maxSize);
 		return false;
 	}
@@ -276,7 +276,7 @@ cc_bool Game_ValidateBitmapPow2(const cc_string* file, struct Bitmap* bmp) {
 	if (!Math_IsPowOf2(bmp->width) || !Math_IsPowOf2(bmp->height)) {
 		Chat_Add1("&cUnable to use %s from the texture pack.", file);
 
-		Chat_Add2("&c Its size is (%i,%i), which is not a power of two size.", 
+		Chat_Add2("&c Its size is (%i,%i), which is not a power of two size.",
 			&bmp->width, &bmp->height);
 		return false;
 	}
@@ -613,7 +613,7 @@ void Game_TakeScreenshot(void) {
 	if (res) { Logger_SysWarn2(res, "creating", &path); return; }
 
 	res = Gfx_TakeScreenshot(&stream);
-	if (res) { 
+	if (res) {
 		Logger_SysWarn2(res, "saving to", &path); stream.Close(&stream); return;
 	}
 
@@ -658,7 +658,7 @@ static void LimitFPS(void) {
 		Thread_Sleep((int)(cooldown + 0.5f));
 
 		/* also accumulate Thread_Sleep duration, as actual sleep */
-		/*  duration can significantly deviate from requested time */ 
+		/*  duration can significantly deviate from requested time */
 		/*  (e.g. requested 4ms, but actually slept for 8ms) */
 		sleepEnd = Stopwatch_Measure();
 		gfx_actualTime += ElapsedMilliseconds(frameEnd, sleepEnd);
@@ -728,15 +728,16 @@ int Game_MapState(int deviceIndex) {
 
 static CC_INLINE void Game_RenderFrame(void) {
 	struct ScheduledTask entTask;
-	float t;
+	double deltaD;
+	float t, delta;
 
 	cc_uint64 render  = Stopwatch_Measure();
 	cc_uint64 elapsed = Stopwatch_ElapsedMicroseconds(frameStart, render);
 	/* avoid large delta with suspended process */
-	if (elapsed > 5000000) elapsed = 5000000; 
+	if (elapsed > 5000000) elapsed = 5000000;
 	
-	double deltaD     = (int)elapsed / (1000.0 * 1000.0);
-	float delta       = (float)deltaD;
+	deltaD = (int)elapsed / (1000.0 * 1000.0);
+	delta  = (float)deltaD;
 	Window_ProcessEvents(delta);
 
 	if (delta <= 0.0f) return;
@@ -761,9 +762,21 @@ static CC_INLINE void Game_RenderFrame(void) {
 	Gfx_BindIb(Gfx.DefaultIb);
 	Game.Time += deltaD;
 	Game_Vertices = 0;
+	Gamepad_Tick(delta);
 
-	if (Input.Sources & INPUT_SOURCE_GAMEPAD) Gamepad_Tick(delta);
+#ifdef CC_BUILD_SPLITSCREEN
+	/* TODO: find a better solution */
+	for (int i = 0; i < Game_NumStates; i++)
+	{
+		Game.CurrentState  = i;
+		Entities.CurPlayer = &LocalPlayer_Instances[i];
+		Camera.Active->UpdateMouse(Entities.CurPlayer, delta);
+	}
+	Game.CurrentState  = 0;
+	Entities.CurPlayer = &LocalPlayer_Instances[0];
+#else
 	Camera.Active->UpdateMouse(Entities.CurPlayer, delta);
+#endif
 
 	if (!Window_Main.Focused && !Gui.InputGrab) Gui_ShowPauseMenu();
 
@@ -823,7 +836,7 @@ static void Game_Free(void) {
 	Event_UnregisterAll();
 	tasksCount = 0;
 
-	for (comp = comps_head; comp; comp = comp->next) 
+	for (comp = comps_head; comp; comp = comp->next)
 	{
 		if (comp->Free) comp->Free();
 	}

@@ -11,14 +11,170 @@
 #include "../third_party/gldc/src/gldc.h"
 
 static cc_bool renderingDisabled;
+static cc_bool stateDirty;
 #define VERTEX_BUFFER_SIZE 32 * 40000
 #define PT_ALPHA_REF 0x011c
+#define MAX_TEXTURE_COUNT 768
+
+
+/*########################################################################################################################*
+*-------------------------------------------------------Vertex list-------------------------------------------------------*
+*#########################################################################################################################*/
+static void VertexList_Append(AlignedVector* list, const void* cmd) {
+    void* dst = aligned_vector_reserve(list, list->size + 1);
+    assert(dst);
+
+    memcpy(dst, cmd, VERTEX_SIZE);
+    list->size++;
+}
+
+/*########################################################################################################################*
+*-----------------------------------------------------Texture memory------------------------------------------------------*
+*#########################################################################################################################*/
+// For PVR2 GPU, highly recommended that multiple textures don't cross the same 2048 byte page alignment
+// So to avoid this, ensure that each texture is allocated at the start of a 2048 byte page
+#define TEXMEM_PAGE_SIZE 2048
+#define TEXMEM_PAGE_MASK (TEXMEM_PAGE_SIZE - 1)
+// Round up to nearest page
+#define TEXMEM_PAGE_ROUNDUP(size) (((size) + TEXMEM_PAGE_MASK) & ~TEXMEM_PAGE_MASK)
+// Leave a little bit of memory available by KOS PVR code
+#define TEXMEM_RESERVED (64 * 1024)
+#define TEXMEM_TO_PAGE(addr) ((cc_uint32)((addr) - texmem_base) / TEXMEM_PAGE_SIZE)
+
+TextureObject* TEXTURE_ACTIVE;
+static TextureObject TEXTURE_LIST[MAX_TEXTURE_COUNT];
+
+// Base address in VRAM for textures
+static cc_uint8* texmem_base;
+// Total number of pages in VRAM
+static cc_uint32 texmem_pages;
+// Stores which pages in VRAM are currently used
+static cc_uint8* texmem_used;
+
+void texmem_init(void) {
+    size_t vram_free = pvr_mem_available();
+    size_t tmem_size = vram_free - TEXMEM_RESERVED;
+
+    void* base   = pvr_mem_malloc(tmem_size);
+    texmem_base  = (void*)TEXMEM_PAGE_ROUNDUP((cc_uintptr)base);
+	texmem_pages = tmem_size / TEXMEM_PAGE_SIZE;
+	texmem_used  = Mem_AllocCleared(1, texmem_pages, "Page state");
+}
+
+static int texmem_move(cc_uint8* ptr, cc_uint32 size) {
+	cc_uint32 pages = TEXMEM_PAGE_ROUNDUP(size) / TEXMEM_PAGE_SIZE;
+	cc_uint32 page  = TEXMEM_TO_PAGE(ptr);
+	int moved = 0;
+
+	// Try to shift downwards towards prior allocated texture
+	while (page > 0 && texmem_used[page - 1] == 0) {
+		page--; moved++;
+		texmem_used[page + pages] = 0;
+	}
+	
+	// Mark previously empty pages as now used
+	for (int i = 0; i < moved; i++) 
+	{
+		texmem_used[page + i] = 1;
+	}
+	return moved * TEXMEM_PAGE_SIZE;
+}
+
+static int texmem_defragment(void) {
+	int moved_any = false;
+	for (int i = 0; i < MAX_TEXTURE_COUNT; i++)
+	{
+		TextureObject* tex = &TEXTURE_LIST[i];
+		if (!tex->data) continue;
+
+		cc_uint32 size = tex->width * tex->height * 2;
+		int moved = texmem_move(tex->data, size);
+		if (!moved) continue;
+
+		moved_any = true;
+		memmove(tex->data - moved, tex->data, size);
+		tex->data -= moved;
+	}
+	return moved_any;
+}
+
+static int texmem_can_alloc(cc_uint32 beg, cc_uint32 pages) {
+	if (texmem_used[beg]) return false;
+
+	for (cc_uint32 page = beg; page < beg + pages; page++)
+	{
+		if (texmem_used[page]) return false;
+	}
+	return true;
+}
+
+static void* texmem_alloc_pages(cc_uint32 size) {
+	cc_uint32 pages = TEXMEM_PAGE_ROUNDUP(size) / TEXMEM_PAGE_SIZE;
+	if (pages > texmem_pages) return NULL;
+
+	for (cc_uint32 page = 0; page < texmem_pages - pages; page++) 
+	{
+		if (!texmem_can_alloc(page, pages)) continue;
+
+		for (cc_uint32 i = 0; i < pages; i++) 
+			texmem_used[page + i] = 1;
+
+        return texmem_base + page * TEXMEM_PAGE_SIZE;
+    }
+	return NULL;
+}
+
+static void* texmem_alloc(cc_uint32 size) {
+    void* ptr = texmem_alloc_pages(size);
+    if (ptr) return ptr;
+
+	Platform_LogConst("Out of VRAM! Defragmenting..");
+	while (texmem_defragment()) { }
+    return texmem_alloc_pages(size);
+}
+
+static void texmem_free(cc_uint8* ptr, cc_uint32 size) {
+	cc_uint32 pages = TEXMEM_PAGE_ROUNDUP(size) / TEXMEM_PAGE_SIZE;
+    cc_uint32 page  = TEXMEM_TO_PAGE(ptr);
+
+	for (cc_uint32 i = 0; i < pages; i++)
+		texmem_used[page + i] = 0;
+}
+
+static cc_uint32 texmem_total_free(void) {
+	cc_uint32 free = 0;
+    for (cc_uint32 page = 0; page < texmem_pages; page++) 
+	{
+		if (!texmem_base[page]) free += TEXMEM_PAGE_SIZE;
+    }
+	return free;
+}
+
+static cc_uint32 texmem_total_used(void) {
+	cc_uint32 used = 0;
+    for (cc_uint32 page = 0; page < texmem_pages; page++) 
+	{
+		if (texmem_base[page]) used += TEXMEM_PAGE_SIZE;
+    }
+	return used;
+}
 
 
 /*########################################################################################################################*
 *---------------------------------------------------------General---------------------------------------------------------*
 *#########################################################################################################################*/
-static void InitPowerVR(void) {
+static AlignedVector listOP;
+static AlignedVector listPT;
+static AlignedVector listTR;
+
+static CC_INLINE AlignedVector* ActivePolyList(void) {
+    if (gfx_alphaBlend) return &listTR;
+    if (gfx_alphaTest)  return &listPT;
+
+    return &listOP;
+}
+
+static void InitGPU(void) {
 	cc_bool autosort = false; // Turn off auto sorting to match traditional GPU behaviour
 	cc_bool fsaa     = false;
 	AUTOSORT_ENABLED = autosort;
@@ -36,7 +192,8 @@ static void InitPowerVR(void) {
 
 static void InitGLState(void) {
 	pvr_set_zclip(0.0f);
-	PVR_SET(PT_ALPHA_REF, 127); // define missing from KOS
+	PVR_SET(PT_ALPHA_REF, 127); // define missing from KOS    
+	//PVR_SET(PVR_SPANSORT_CFG, 0x0);
 
 	ALPHA_TEST_ENABLED = false;
 	CULLING_ENABLED    = false;
@@ -46,12 +203,19 @@ static void InitGLState(void) {
 	TEXTURES_ENABLED   = false;
 	FOG_ENABLED        = false;
 	
-	STATE_DIRTY = true;
+	stateDirty       = true;
+    listOP.list_type = PVR_LIST_OP_POLY;
+    listPT.list_type = PVR_LIST_PT_POLY;
+    listTR.list_type = PVR_LIST_TR_POLY;
+
+    aligned_vector_reserve(&listOP, 1024 * 3);
+    aligned_vector_reserve(&listPT,  512 * 3);
+    aligned_vector_reserve(&listTR, 1024 * 3);
 }
 
 void Gfx_Create(void) {
-	if (!Gfx.Created) InitPowerVR();
-	if (!Gfx.Created) glKosInit();
+	if (!Gfx.Created) InitGPU();
+	if (!Gfx.Created) texmem_init();
 
 	InitGLState();
 	
@@ -81,12 +245,12 @@ static PackedCol gfx_clearColor;
 
 void Gfx_SetFaceCulling(cc_bool enabled) { 
 	CULLING_ENABLED = enabled;
-	STATE_DIRTY     = true;
+	stateDirty      = true;
 }
 
 static void SetAlphaBlend(cc_bool enabled) { 
 	BLEND_ENABLED = enabled;
-	STATE_DIRTY   = true;
+	stateDirty    = true;
 }
 void Gfx_SetAlphaArgBlend(cc_bool enabled) { }
 
@@ -108,19 +272,19 @@ void Gfx_SetDepthWrite(cc_bool enabled) {
 	if (DEPTH_MASK_ENABLED == enabled) return;
 	
 	DEPTH_MASK_ENABLED = enabled;
-	STATE_DIRTY        = true;
+	stateDirty         = true;
 }
 
 void Gfx_SetDepthTest(cc_bool enabled) { 
 	if (DEPTH_TEST_ENABLED == enabled) return;
 	
 	DEPTH_TEST_ENABLED = enabled;
-	STATE_DIRTY        = true;
+	stateDirty         = true;
 }
 
 static void SetAlphaTest(cc_bool enabled) {
 	ALPHA_TEST_ENABLED = enabled;
-	STATE_DIRTY        = true;
+	stateDirty         = true;
 }
 
 void Gfx_DepthOnlyRendering(cc_bool depthOnly) {
@@ -227,18 +391,6 @@ void Gfx_DeleteDynamicVb(GfxResourceID* vb) { Gfx_DeleteVb(vb); }
 /*########################################################################################################################*
 *---------------------------------------------------------Textures--------------------------------------------------------*
 *#########################################################################################################################*/
-void Gfx_BindTexture(GfxResourceID texId) {
-	gldcBindTexture((GLuint)texId);
-	STATE_DIRTY = true;
-}
-
-void Gfx_DeleteTexture(GfxResourceID* texId) {
-	GLuint id = (GLuint)(*texId);
-	if (!id) return;
-	gldcDeleteTexture(id);
-	*texId = 0;
-}
-
 void Gfx_EnableMipmaps(void)  { }
 void Gfx_DisableMipmaps(void) { }
 
@@ -332,18 +484,28 @@ static void ConvertTexture(cc_uint16* dst, struct Bitmap* bmp, int rowWidth) {
 	}
 }
 
+static TextureObject* FindFreeTexture(void) {
+    for (int i = 0; i < MAX_TEXTURE_COUNT; i++) 
+	{
+		TextureObject* tex = &TEXTURE_LIST[i];
+        if (!tex->data) return tex;
+    }
+    return NULL;
+}
+
 static GfxResourceID Gfx_AllocTexture(struct Bitmap* bmp, int rowWidth, cc_uint8 flags, cc_bool mipmaps) {
-	GLuint texId = gldcGenTexture();
-	gldcBindTexture(texId);
-	
-	int res = gldcAllocTexture(bmp->width, bmp->height, PVR_TXRFMT_ARGB4444);
-	if (res) { Platform_LogConst("Out of PVR VRAM!"); return 0; }
-				
-	void* pixels;
-	int width, height;
-	gldcGetTexture(&pixels, &width, &height);
-	ConvertTexture(pixels, bmp, rowWidth);
-	return (GfxResourceID)texId;
+	TextureObject* tex = FindFreeTexture();
+	if (!tex) return NULL;
+
+	tex->width  = bmp->width;
+	tex->height = bmp->height;
+	tex->color  = PVR_TXRFMT_ARGB4444;
+
+	tex->data = texmem_alloc(bmp->width * bmp->height * 2);
+	if (!tex->data) { Platform_LogConst("Out of PVR VRAM!"); return NULL; }
+
+	ConvertTexture(tex->data, bmp, rowWidth);
+	return tex;
 }
 
 // TODO: struct GPUTexture ??
@@ -373,16 +535,29 @@ static void ConvertSubTexture(cc_uint16* dst, int texWidth, int texHeight,
 }
 
 void Gfx_UpdateTexture(GfxResourceID texId, int x, int y, struct Bitmap* part, int rowWidth, cc_bool mipmaps) {
-	gldcBindTexture((GLuint)texId);
-				
-	void* pixels;
-	int width, height;
-	gldcGetTexture(&pixels, &width, &height);
+	TextureObject* tex = (TextureObject*)texId;
 	
-	ConvertSubTexture(pixels, width, height,
+	ConvertSubTexture(tex->data, tex->width, tex->height,
 				x, y, part, rowWidth);
 	// TODO: Do we need to flush VRAM?
 }
+
+void Gfx_BindTexture(GfxResourceID texId) {
+    TEXTURE_ACTIVE = (TextureObject*)texId;
+	stateDirty     = true;
+}
+
+void Gfx_DeleteTexture(GfxResourceID* texId) {
+	TextureObject* tex = (TextureObject*)(*texId);
+	if (!tex) return;
+
+	cc_uint32 size = tex->width * tex->height * 2;
+	texmem_free(tex->data, size);
+
+	tex->data = NULL;
+	*texId    = 0;
+}
+
 
 
 /*########################################################################################################################*
@@ -397,7 +572,7 @@ void Gfx_SetFog(cc_bool enabled) {
 	if (FOG_ENABLED == enabled) return;
 	
 	FOG_ENABLED = enabled;
-	STATE_DIRTY = true;
+	stateDirty  = true;
 }
 
 void Gfx_SetFogCol(PackedCol color) {
@@ -524,7 +699,7 @@ static cc_bool loggedNoVRAM;
 extern Vertex* DrawColouredQuads(const void* src, Vertex* dst, int numQuads);
 extern Vertex* DrawTexturedQuads(const void* src, Vertex* dst, int numQuads);
 
-static Vertex* ReserveOutput(AlignedVector* vec, uint32_t elems) {
+static Vertex* ReserveOutput(AlignedVector* vec, cc_uint32 elems) {
 	Vertex* beg;
 	for (;;)
 	{
@@ -542,16 +717,16 @@ static Vertex* ReserveOutput(AlignedVector* vec, uint32_t elems) {
 
 void DrawQuads(int count, void* src) {
 	if (!count) return;
-	AlignedVector* vec = _glActivePolyList();
+	AlignedVector* vec = ActivePolyList();
 
-	uint32_t header_required = (vec->size == 0) || STATE_DIRTY;
+	cc_uint32 header_required = (vec->size == 0) || stateDirty;
 	// Reserve room for the vertices and header
 	Vertex* beg = ReserveOutput(vec, vec->size + (header_required) + count);
 	if (!beg) return;
 
 	if (header_required) {
 		apply_poly_header((pvr_poly_hdr_t*)beg, vec->list_type);
-		STATE_DIRTY = false;
+		stateDirty = false;
 		beg++; 
 		vec->size += 1;
 	}
@@ -571,7 +746,7 @@ void Gfx_SetVertexFormat(VertexFormat fmt) {
 	gfx_stride = strideSizes[fmt];
 
 	TEXTURES_ENABLED = fmt == VERTEX_FORMAT_TEXTURED;
-	STATE_DIRTY      = true;
+	stateDirty       = true;
 }
 
 void Gfx_DrawVb_Lines(int verticesCount) {
@@ -612,8 +787,8 @@ cc_result Gfx_TakeScreenshot(struct Stream* output) {
 }
 
 void Gfx_GetApiInfo(cc_string* info) {
-	int freeMem = _glFreeTextureMemory();
-	int usedMem = _glUsedTextureMemory();
+	int freeMem = texmem_total_free();
+	int usedMem = texmem_total_used();
 	
 	float freeMemMB = freeMem / (1024.0 * 1024.0);
 	float usedMemMB = usedMem / (1024.0 * 1024.0);
@@ -636,22 +811,32 @@ void Gfx_ClearBuffers(GfxBuffers buffers) {
 	// no need to use glClear
 }
 
+static pvr_dr_state_t dr_state;
+static void SubmitList(AlignedVector* cmds) {
+	if (!cmds->size) return;
+
+	pvr_list_begin(cmds->list_type);
+	{
+		pvr_dr_init(&dr_state);
+		SceneListSubmit((Vertex*)cmds->data, cmds->size);
+		sq_wait();
+	}
+	pvr_list_finish();
+	cmds->size = 0;
+}
+
 void Gfx_EndFrame(void) {
 	pvr_wait_ready();
 
     pvr_scene_begin();
-	glKosSwapBuffers();
+	SubmitList(&listOP);
+	SubmitList(&listPT);
+	SubmitList(&listTR);
     pvr_scene_finish();
 }
 
 void Gfx_OnWindowResize(void) {
 	Gfx_SetViewport(0, 0, Game.Width, Game.Height);
-}
-
-static void PushCommand(void* cmd) {
-    aligned_vector_push_back(&OP_LIST, cmd, 1);
-    aligned_vector_push_back(&PT_LIST, cmd, 1);
-    aligned_vector_push_back(&TR_LIST, cmd, 1);
 }
 
 void Gfx_SetViewport(int x, int y, int w, int h) {
@@ -663,7 +848,7 @@ void Gfx_SetViewport(int x, int y, int w, int h) {
 
 void Gfx_SetScissor(int x, int y, int w, int h) {
 	SCISSOR_TEST_ENABLED = x != 0 || y != 0 || w != Game.Width || h != Game.Height;
-	STATE_DIRTY = true;
+	stateDirty = true;
 
 	pvr_poly_hdr_t c;
 	c.cmd = PVR_CMD_USERCLIP;
@@ -673,6 +858,9 @@ void Gfx_SetScissor(int x, int y, int w, int h) {
 	c.d2 = y >> 5;
 	c.d3 = ((x + w) >> 5) - 1;
 	c.d4 = ((y + h) >> 5) - 1;
-	PushCommand(&c);
+
+    VertexList_Append(&listOP, &c);
+    VertexList_Append(&listPT, &c);
+    VertexList_Append(&listTR, &c);
 }
 #endif
