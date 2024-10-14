@@ -69,7 +69,7 @@ jobs:
           
           # compile java files into multiple .class files
           cd $ROOT_DIR/android/app/src/main/java/com/classicube
-          javac *.java -d $ROOT_DIR/android/app/src/main/obj -classpath $SDK_ROOT/android.jar --release 8
+          javac *.java -d $ROOT_DIR/android/app/src/main/obj -classpath $SDK_ROOT/android.jar
           
           cd $ROOT_DIR/android/app/src/main
           # get debug signing key
