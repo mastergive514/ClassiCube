@@ -57,7 +57,7 @@ jobs:
 
           # Compile java files
           cd $ROOT_DIR/android/app/src/main/java/com/classicube
-          javac *.java -d $ROOT_DIR/android/app/src/main/obj -classpath $SDK_ROOT/android.jar    --release 8
+          javac *.java -d $ROOT_DIR/android/app/src/main/obj -classpath $SDK_ROOT/android.jar --release 8
 
           cd $ROOT_DIR/android/app/src/main
 
