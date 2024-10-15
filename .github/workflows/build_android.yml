@@ -62,7 +62,7 @@ jobs:
           cd $ROOT_DIR/android/app/src/main
 
           # Generate a new debug keystore 
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000  
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
 
           # Compile the multiple .class files into one .dex file
           $TOOLS_ROOT/dx --dex --output=obj/classes.dex ./obj
