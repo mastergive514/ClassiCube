@@ -53,7 +53,7 @@ jobs:
           cp $ROOT_DIR/src/cc-droid-arm_32 lib/armeabi-v7a/libclassicube.so
           cp $ROOT_DIR/src/cc-droid-arm_64 lib/arm64-v8a/libclassicube.so
           cp $ROOT_DIR/src/cc-droid-x86_32 lib/x86/libclassicube.so
-          cp $ROOT_DIR/src/cc-droid-x86_64 lib/x86_64/libclassicube.so   
+          cp $ROOT_DIR/src/cc-droid-x86_64 lib/x86_64/libclassicube.so
 
           # Compile java files
           cd $ROOT_DIR/android/app/src/main/java/com/classicube
@@ -72,9 +72,9 @@ jobs:
           cp obj/classes.dex classes.dex
           $TOOLS_ROOT/aapt add -f obj/cc-unsigned.apk classes.dex lib/armeabi/libclassicube.so lib/armeabi-v7a/libclassicube.so lib/arm64-v8a/libclassicube.so lib/x86/libclassicube.so lib/x86_64/libclassicube.so
 
-          # Sign the apk with debug    key 
+          # Sign the apk with debug
           cp obj/cc-unsigned.apk obj/cc-signed.apk
-          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore debug.keystore -storepass android -keypass android obj/cc-signed.apk androiddebugkey   
+          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore debug.keystore -storepass android -keypass android obj/cc-signed.apk androiddebugkey
 
           # Create aligned .apk file
           $TOOLS_ROOT/zipalign -f 4 obj/cc-signed.apk $ROOT_DIR/src/cc.apk
