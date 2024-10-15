@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- BEGIN_INCLUDE(manifest) -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.classicube.android.client"
+          package="com.novacraft.android.client"
           android:versionCode="1370"
           android:versionName="1.3.7">
 
@@ -10,7 +10,7 @@
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="18" />
   <uses-sdk android:minSdkVersion="8" android:targetSdkVersion="26"/>
   
-  <application android:icon="@mipmap/ccicon" android:label="ClassiCube">
+  <application android:icon="@mipmap/ccicon" android:label="NovaCraft">
     <provider
         android:name="com.classicube.CCFileProvider"
         android:authorities="com.classicube.android.client.provider"
@@ -18,7 +18,7 @@
         android:grantUriPermissions="true" >
     </provider>
 
-    <activity android:name="com.classicube.MainActivity" android:label="ClassiCube"
+    <activity android:name="com.classicube.MainActivity" android:label="NovaCraft"
               android:configChanges="orientation|screenSize|keyboard|keyboardHidden">
 
       <intent-filter>
